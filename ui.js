@@ -4,7 +4,7 @@ import { levels, evolved } from './weapons.js';
 import { mobs } from './enemies.js';
 import { choices, rarities, offset, utilityOffset, cardInfo } from './passives.js';
 import { save, persist } from './save.js';
-import { unlock } from './audio.js';
+import { unlock, sound, soundIds, setAudioVolumes, syncAudio } from './audio.js';
 import { characters, weaponCosts } from './data/characters.js';
 import { weapons, slots } from './data/weapons.js';
 import { passives, shop, shopCap, shopCost } from './data/passives.js';
@@ -80,9 +80,13 @@ function drawMenu() {
     actions(btn('Rejouer','play','primary')+btn('Menu','exit')));
 }
 
+function volume(label,key) {
+  return '<label class="volume">'+label+' <input type="range" min="0" max="100" value="'+Math.round(save.options[key]*100)+'" data-volume="'+key+'"></label>';
+}
+
 function options(returnTo) {
   const opt=save.options;
-  screen('Options',actions(btn('Son · '+(opt.sound?'activé':'coupé'),'sound')+
+  screen('Options',actions(volume('Musique','musicVolume')+volume('Effets','sfxVolume')+btn('Son · '+(opt.sound?'activé':'coupé'),'sound')+
     btn('Vibration · '+(opt.vibration?'activée':'coupée'),'vibration')+
     btn('Secousses · '+(opt.shake?'activées':'coupées'),'shake')+
     btn('Qualité des effets · '+['basse','moyenne','haute'][opt.quality],'quality')+btn('Retour',returnTo)));
@@ -102,6 +106,7 @@ function drawKit() {
 }
 
 export function syncUi(force=false) {
+  syncAudio(run.mode,run.elapsed,run.enemyCount,run.boss>=0);
   if(force || previous!==run.mode) {
     previous=run.mode;
     if(run.mode!=='level') banishMode=false;
@@ -133,6 +138,13 @@ function screenOrientationLock() {
 }
 
 pause.addEventListener('click',()=>{ if(run.mode==='playing') { page='pauseMenu'; background(); syncUi(); } });
+panel.addEventListener('input',event=>{
+  const key=event.target.dataset.volume;
+  if(!key) return;
+  save.options[key]=event.target.valueAsNumber/100;
+  setAudioVolumes();
+});
+panel.addEventListener('change',event=>{ if(event.target.dataset.volume) persist(); });
 panel.addEventListener('click',event=>{
   const target=event.target.closest('button[data-do]');
   if(!target || target.disabled) return;
@@ -161,19 +173,19 @@ panel.addEventListener('click',event=>{
   else if(/^character\d+$/.test(action)) {
     const i=Number(action.slice(9));
     if(!(save.characters & (1<<i))) {
-      save.gold-=characters[i].cost; save.characters|=1<<i; persist();
+      save.gold-=characters[i].cost; save.characters|=1<<i; sound(soundIds.buy); persist();
     }
     selected=i;
   } else if(action.startsWith('buy')) {
     const i=Number(action.slice(3));
-    save.gold-=shopCost*(1+save.upgrades[i]); save.upgrades[i]++; persist();
+    save.gold-=shopCost*(1+save.upgrades[i]); save.upgrades[i]++; sound(soundIds.buy); persist();
   } else if(action.startsWith('weapon')) {
     const i=Number(action.slice(6));
-    save.gold-=weaponCosts[i]; save.weapons|=1<<i; persist();
+    save.gold-=weaponCosts[i]; save.weapons|=1<<i; sound(soundIds.buy); persist();
   } else if(action==='quality') {
     save.options.quality=(save.options.quality+2)%3; persist();
   } else if(action in save.options) {
-    save.options[action]=!save.options[action]; if(action==='sound' && save.options.sound) unlock(); persist();
+    save.options[action]=!save.options[action]; if(action==='sound') { setAudioVolumes(); if(save.options.sound) unlock(); } persist();
   } else page=action;
   syncUi(true);
 });

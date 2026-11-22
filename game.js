@@ -12,10 +12,10 @@ import { shots, levels, evolved, enemyShot, resetWeapons, updateWeapons, refresh
 import { loot, drop, attract, resetLoot, updateLoot } from './pickups.js';
 import { resetWaves, updateWaves } from './waves.js';
 import { offer, upgrade, reward, banish, resetCards, utilityOffset } from './passives.js';
-import { sound, vibrate } from './audio.js';
+import { sound, vibrate, soundIds } from './audio.js';
 import { save, persist } from './save.js';
 
-export const run={ mode:'menu', elapsed:0, xp:0, goal:xpGoal(1,1), level:1, kills:0, gold:0, paid:0, rerolls:cardTools.rerolls, skips:cardTools.skips, banishes:cardTools.banishes, chests:0, reward:-1, boss:-1 };
+export const run={ mode:'menu', elapsed:0, xp:0, goal:xpGoal(1,1), level:1, kills:0, gold:0, paid:0, rerolls:cardTools.rerolls, skips:cardTools.skips, banishes:cardTools.banishes, chests:0, reward:-1, boss:-1, enemyCount:0 };
 const effects=Array.from({length:caps.effects},()=>({life:0,x:0,y:0,vx:0,vy:0,label:'',color:''}));
 const numbers=Array.from({length:1000},(_,i)=>String(i));
 const chainLinks=[3,3], noDash=[];
@@ -36,7 +36,7 @@ export function background() {
 
 export function start(character) {
   run.mode='playing'; run.elapsed=run.xp=run.kills=run.gold=run.paid=run.chests=0;
-  run.level=1; run.reward=run.boss=-1;
+  run.level=1; run.reward=run.boss=-1; run.enemyCount=0;
   bossSpawned=false; impact=shake=cursor=0;
   resetPlayer(character);
   run.goal=xpGoal(1,stats.growth);
@@ -51,6 +51,7 @@ export function start(character) {
 
 function finish(mode) {
   run.mode=mode;
+  sound(mode==='won' ? soundIds.victory : soundIds.defeat);
   bank();
 }
 
@@ -64,6 +65,7 @@ export function choose(id) {
   } else {
     const growth=stats.growth;
     upgrade(id);
+    sound(soundIds.choose);
     if(stats.growth!==growth) {
       run.xp*=stats.growth/growth;
       run.goal=xpGoal(run.level,stats.growth);
@@ -82,7 +84,7 @@ export function banishCard(id) {
   return true;
 }
 
-function addGold(value) { run.gold+=Math.round(value*stats.goldGain); }
+function addGold(value) { run.gold+=Math.round(value*stats.goldGain); sound(soundIds.coin); }
 
 function particle(x,y,vx,vy,life,label,color) {
   const p=effects[cursor++ % effects.length];
@@ -137,10 +139,10 @@ function collect(kind,value) {
 function interrupt() {
   if(run.chests) {
     run.chests--; run.reward=reward(); addGold(chestGold);
-    sound(5); vibrate(45); run.mode='chest';
+    sound(run.reward>=weapons.length ? soundIds.evolve : soundIds.chest); vibrate(45); run.mode='chest';
   } else if(run.xp>=run.goal) {
     run.xp-=run.goal; run.level++; run.goal=xpGoal(run.level,stats.growth);
-    offer(); sound(4); vibrate(35); run.mode='level';
+    offer(); sound(soundIds.level); sound(soundIds.cards); vibrate(35); run.mode='level';
   }
 }
 
@@ -181,10 +183,12 @@ export function update(dt) {
   updateEnemies(dt,minute,hurt,enemyShot,hit);
   updateWeapons(dt,scene.width,scene.height,hit,hurt);
   updateLoot(dt,collect);
-  run.boss=-1;
+  run.boss=-1; run.enemyCount=0;
   let finalBoss=false;
   for(let i=0;i<mobs.length;i++) {
-    if(!mobs[i].active || mobs[i].kind<6) continue;
+    if(!mobs[i].active) continue;
+    run.enemyCount++;
+    if(mobs[i].kind<6) continue;
     if(run.boss<0 || mobs[i].kind>mobs[run.boss].kind) run.boss=i;
     if(mobs[i].kind===8) finalBoss=true;
   }

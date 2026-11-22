@@ -1,3 +1,7 @@
+import { soundIds } from './audio.js';
+
+const weaponSounds={faux:soundIds.scythe,fusil:soundIds.shotgun,torches:soundIds.flame,cocktail:soundIds.flame,brume:soundIds.flame,
+ foudre:soundIds.lightning,hache:soundIds.scythe,arbalete:soundIds.bolt,mines:soundIds.trap,os:soundIds.bolt,chaines:soundIds.scythe,chien:soundIds.hound};
 const progressions = [
  {projectiles:1},{degats:.27},{zone:.22},{perforation:2},{cooldown:-.20},{duree:.30}
 ];
@@ -16,10 +20,10 @@ export const weapons = [
  ['chaines','Chaînes de cendre','aura','cendre','⛓','Ralentit les cibles et les attire.','Entraves du grand marais',8,15,1.07,1,57,0,.28,13,64,.08,-132,'#cbc1d8','chains','slow',1.6,{recul:-80}],
  ['chien','Chien fantôme','ally','spectre','✧','Un allié poursuit et mord les zombies.','Meute des disparus',6,15,2.26,1,9,102,2.1,10,130,.10,0,'#b4e0f3','hound','',0,{projectiles:2}]
 ].map(([id,nom,type,tag,icon,description,nomEvolue,passifRequis,degats,cooldown,projectiles,zone,vitesse,duree,perforation,portee,crit,recul,color,effetVisuel,status,dureeStatut,special]) => ({
- id,nom,type,tags:[tag],icon,description,color,effetVisuel,son:0,status,dureeStatut,
+ id,nom,type,tags:[tag],icon,description,color,effetVisuel,son:weaponSounds[id] ?? soundIds.bolt,status,dureeStatut,
  baseStats:{degats,cooldown,projectiles,zone,vitesse,duree,perforation,portee,crit,recul},
  niveaux:[{},...progressions,special],
- evolution:{passifRequis,nomEvolue,bonus:{degats:2,zone:1.22,projectiles:1},son:8}
+ evolution:{passifRequis,nomEvolue,bonus:{degats:2,zone:1.22,projectiles:1},son:soundIds.evolve}
 }));
 export const weaponMax = 8;
 export const slots = 6;
