@@ -8,8 +8,8 @@ import { bindSocial, drawSocial, socialMode } from './social-ui.js';
 import { drawHome, initHomeArt } from './home.js';
 import { drawProfile, bindProfile, retryProfile } from './profile-ui.js';
 import { bindMetaVolumes, drawMeta, drawRunResult, handleMeta } from './meta-ui.js';
-import { run, start, background, choose, reroll, skip, banishCard, dismissChest } from './game.js';
-import { player, passiveLevels } from './player.js';
+import { run, start, background, choose, reroll, skip, banishCard, dismissChest, useFieldKit, kitStatus } from './game.js';
+import { player, stats, passiveLevels } from './player.js';
 import { levels, evolved } from './weapons.js';
 import { mobs } from './enemies.js';
 import { choices, rarities, offset, utilityOffset, cardInfo } from './passives.js';
@@ -23,6 +23,12 @@ import { cardRarities } from './data/cards.js';
 const menu=document.querySelector('#menu'), panel=document.querySelector('#panel'), hud=document.querySelector('#hud');
 const bar=document.querySelector('#experience'), clock=document.querySelector('#clock'), level=document.querySelector('#level');
 const boss=document.querySelector('#boss'), bossName=boss.querySelector('span'), bossBar=boss.querySelector('i');
+const healthText=document.querySelector('#health-text'), healthFill=document.querySelector('#health-fill');
+const waveText=document.querySelector('#wave'), killText=document.querySelector('#kills');
+const field=document.querySelector('#field-kit'), salve=field.querySelector('[data-field=heal]'), pulse=field.querySelector('[data-field=pulse]');
+const wavesText=Array.from({length:16},(_,i)=>'Vague '+i);
+const energyText=Array.from({length:19},(_,i)=>i?i+' s':'Onde');
+let lastWave=-1,lastKills=-1,lastHealth=-1,lastMax=-1,lastSalves=-1,lastPulse=-1;
 const kit=document.querySelector('#kit'), pause=document.querySelector('#pause');
 const percent=Array.from({length:101},(_,i)=>i+'%');
 const digits=Array.from({length:60},(_,i)=>String(i).padStart(2,'0'));
@@ -135,6 +141,20 @@ export function syncUi(force=false) {
     if(remaining!==lastCountdown) { lastCountdown=remaining; const output=document.querySelector('#choice-timer'); if(output) output.textContent=countdowns[remaining]; }
   }
   if(hud.hidden) return;
+  const wave=Math.min(15,Math.floor(run.elapsed/60)+1), hp=Math.ceil(player.hp), max=Math.round(stats.health);
+  if(wave!==lastWave) { lastWave=wave;waveText.textContent=wavesText[wave]; }
+  if(run.kills!==lastKills) { lastKills=run.kills;killText.textContent='☠ '+run.kills; }
+  if(hp!==lastHealth||max!==lastMax) {
+    lastHealth=hp;lastMax=max;healthText.textContent=hp+' / '+max;
+    healthFill.style.width=percent[Math.max(0,Math.min(100,Math.round(hp*100/max)))];
+  }
+  field.hidden=activeWorld()||run.mode!=='playing';
+  if(!field.hidden) {
+    const recharge=Math.max(0,Math.min(18,Math.ceil(kitStatus.pulse)));
+    if(lastPulse!==recharge) { lastPulse=recharge;pulse.textContent=energyText[recharge];pulse.disabled=recharge>0; }
+    if(lastSalves!==kitStatus.salves) { lastSalves=kitStatus.salves;salve.textContent='✚ '+lastSalves; }
+    salve.disabled=!kitStatus.salves||hp>=max;
+  }
   const second=Math.min(3600,Math.floor(run.elapsed));
   if(second!==lastSecond) { lastSecond=second; clock.textContent=times[second]; }
   if(run.level!==lastLevel) {
@@ -159,6 +179,10 @@ function screenOrientationLock() {
   window.screen.orientation?.lock?.('portrait')?.catch(()=>{});
 }
 
+field.addEventListener('click',event=>{
+  const control=event.target.closest('button[data-field]');
+  if(control) { useFieldKit(control.dataset.field); syncUi(); }
+});
 pause.addEventListener('click',()=>{ if(run.mode==='playing') { page='pauseMenu'; if(!coopPause(true)) background(); syncUi(); } });
 panel.addEventListener('click',event=>{
   const target=event.target.closest('button[data-do]');
@@ -171,13 +195,13 @@ panel.addEventListener('click',event=>{
     if(page==='combat' && action==='m:page:combat') openCombatHistory();
     if(page==='cosmetics' && action==='m:page:cosmetics') cosmeticsState();
   }
-  else if(action==='play') {
+  else if(action==='play'||action==='play-tide') {
     if(coop.id) leaveCoopWorld();
     unlock();
     if(matchMedia('(display-mode: fullscreen)').matches || navigator.standalone) {
       screenOrientationLock();
     }
-    start(selectedCharacter(),selectedWeapon());
+    start(selectedCharacter(),selectedWeapon(),null,action==='play-tide');
   }
   else if(action==='home') { unlock(); page='home'; }
   else if(action==='exit') { if(coop.id) leaveCoopWorld(); background(); run.mode='menu'; page='home'; }

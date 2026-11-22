@@ -1,3 +1,5 @@
+import { heroPortrait, armPortrait } from './home-art.js';
+import { redTide } from './data/modes.js';
 import { save, persist, resetSave } from './save.js';
 import { achievements, shop, shopCap, weaponCosts } from './data/shop.js';
 import { characters } from './data/characters.js';
@@ -13,7 +15,7 @@ const quality=['basse','moyenne','haute'];
 const tabLabels=['Améliorations','Armes','Personnages'];
 const collectionLabels=['Bestiaire','Armes','Succès'];
 const toggleLabels={sound:'Son',vibration:'Vibration',shake:'Secousses',leftHanded:'Mode gaucher'};
-let shopTab=0, collectionTab=0;
+let shopMode='upgrades', shopTab=0, collectionTab=0, optionTab=0, questTab=0, heroPreview=-1, weaponPreview=-1;
 
 function amount(value,unit){
   const n=unit==='%' ? Math.round(value*1000)/10 : Math.round(value*100)/100;
@@ -30,12 +32,14 @@ function optionLabel(key){ return toggleLabels[key]+' · '+(save.options[key]?'o
 
 function options(back,ui){
   const { screen,actions,btn }=ui, opt=save.options;
-  const volume=(key,title)=>'<label class="meta-volume">'+title+' <input type="range" min="0" max="100" step="1" data-volume="'+key+'" value="'+Math.round(opt[key]*100)+'"></label>';
-  screen('Options',actions(volume('musicVolume','Musique')+volume('sfxVolume','Effets sonores')+
-    btn(optionLabel('sound'),'m:toggle:sound')+btn(optionLabel('vibration'),'m:toggle:vibration')+
-    btn(optionLabel('shake'),'m:toggle:shake')+btn(optionLabel('leftHanded'),'m:toggle:leftHanded')+
-    btn('Qualité des effets · '+quality[opt.quality],'m:quality')+
-    (back==='home'?btn('Effacer la sauvegarde','m:page:reset'): '')+btn('Retour',back)));
+  const volume=(key,title)=>'<label class="meta-volume">'+title+' <output>'+Math.round(opt[key]*100)+' %</output><input type="range" min="0" max="100" step="1" data-volume="'+key+'" value="'+Math.round(opt[key]*100)+'"></label>';
+  const pages=[
+    btn(optionLabel('vibration'),'m:toggle:vibration')+(back==='home'?btn('Effacer la sauvegarde','m:page:reset'):''),
+    volume('musicVolume','Musique')+volume('sfxVolume','Effets sonores')+btn(optionLabel('sound'),'m:toggle:sound'),
+    btn('Qualité des effets · '+quality[opt.quality],'m:quality')+btn(optionLabel('shake'),'m:toggle:shake'),
+    btn(optionLabel('leftHanded'),'m:toggle:leftHanded')+'<p>Glisse ton pouce dans la moitié basse de l’écran. Les attaques se déclenchent automatiquement.</p>'
+  ];
+  screen('Paramètres',tabs(['Général','Audio','Graphismes','Commandes'],optionTab,'m:settings:',btn)+actions(pages[optionTab]+btn('Retour',back)));
 }
 
 function charactersList(ui,allowSelect){
@@ -51,12 +55,48 @@ function charactersList(ui,allowSelect){
 }
 
 function weaponList(ui){
-  let list='';
+  const id=weaponPreview<0?selectedWeapon():weaponPreview, chosen=weapons[id], defined=ownsWeapon(id), b=chosen.baseStats;
+  let cards='<div class="loadout-grid">';
   for(let i=0;i<weapons.length;i++){
     const w=weapons[i], owned=ownsWeapon(i);
-    list+=ui.card(w.nom+(owned?' · débloquée':' · '+weaponCosts[i]+' or'),w.description,w.icon,'m:weapon:'+i,owned||save.gold<weaponCosts[i]);
+    cards+='<button class="loadout-card'+(id===i?' current':'')+'" style="--accent:'+w.color+'" type="button" data-do="m:previewWeapon:'+i+
+      '"><img alt="" width="40" height="25" src="'+armPortrait(w)+'"><strong>'+w.nom+'</strong><small>'+(owned?'Disponible':weaponCosts[i]+' or')+'</small></button>';
   }
-  return list;
+  const meter=(title,value,max)=>'<div class="stat-meter"><span>'+title+'</span><b><i style="width:'+Math.min(100,100*value/max)+'%"></i></b></div>';
+  return cards+'</div><section class="loadout-detail" style="--accent:'+chosen.color+'"><h3>'+chosen.nom+'</h3><p>'+chosen.description+'</p>'+
+    meter('Dégâts',b.degats,40)+meter('Cadence',1/b.cooldown,3)+meter('Portée',b.portee,220)+
+    ui.btn(defined?(id===selectedWeapon()?'Équipée':'Équiper'):'Acheter · '+weaponCosts[id]+' or',defined?'m:starter:'+id:'m:weapon:'+id,'primary',
+      defined?id===selectedWeapon():save.gold<weaponCosts[id])+'</section>';
+}
+
+function heroGallery(ui,back) {
+  const id=heroPreview<0?selectedCharacter():heroPreview, c=characters[id], owned=ownsCharacter(id);
+  let grid='<div class="hero-grid">';
+  for(let i=0;i<characters.length;i++) {
+    const h=characters[i], available=ownsCharacter(i);
+    grid+='<button class="hero-card'+(i===id?' current':'')+'" type="button" data-do="m:previewHero:'+i+'"><img alt="" width="48" height="56" src="'+heroPortrait(i)+
+      '"><strong>'+h.name+'</strong><small>'+(available?(i===selectedCharacter()?'Sélectionné':'Débloqué'):h.cost+' or')+'</small></button>';
+  }
+  ui.screen('Personnages',grid+'</div><section class="loadout-detail"><h3>'+c.name+'</h3><p>'+c.description+'</p>'+
+    ui.btn(owned?'Sélectionner':'Débloquer · '+c.cost+' or','m:selectHero:'+id,'primary',!owned&&save.gold<c.cost)+'</section>'+ui.actions(ui.btn('Retour',back)));
+}
+
+function drawQuests(ui) {
+  const {screen,btn,actions}=ui;
+  if(questTab===1) {
+    screen('Quêtes et événements',tabs(['Quêtes','Événement'],questTab,'m:quest:',btn)+
+      '<section class="raid-card"><h3>'+redTide.name+'</h3><p>Les hordes sont plus nombreuses et plus résistantes.</p>'+
+      btn('Participer','play-tide','primary')+'</section>'+actions(btn('Retour','home')));
+    return;
+  }
+  let list='';
+  for(let i=0;i<achievements.length;i++) {
+    const [,title,desc,key,goal,prize]=achievements[i], value=Math.min(goal,achievementValue(key));
+    const won=!!(save.collection.achievements & (1<<i)), shown=key==='bestTime'?Math.floor(value/60)+' / '+goal/60+' min':value+' / '+goal;
+    list+='<article class="quest-row"><strong>'+title+'</strong><span>'+desc+'</span><progress max="'+goal+'" value="'+value+'"></progress><small>'+
+      shown+' · '+(won?'Reçu':'Récompense')+' · '+prize+' or</small></article>';
+  }
+  screen('Quêtes et événements',tabs(['Quêtes','Événement'],questTab,'m:quest:',btn)+list+actions(btn('Retour','home')));
 }
 
 function drawShop(ui){
@@ -68,11 +108,13 @@ function drawShop(ui){
       const change=amount(step*rank,unit)+' → '+amount(step*Math.min(shopCap,rank+1),unit);
       list+=card(name+' · '+rank+'/'+shopCap,change+(rank===shopCap?' · Maximum':' · Acheter '+cost+' or'),'＋','m:buy:'+i,rank===shopCap||save.gold<cost);
     }
+    list='<div class="upgrade-grid">'+list+'</div>';
     const refund=refundValue();
     if(refund) list+=btn('Rembourser toutes les améliorations · '+refund+' or','m:page:refund');
   } else if(shopTab===1) list=weaponList(ui);
   else list=charactersList(ui,false);
-  screen('Boutique · '+save.gold+' or',tabs(tabLabels,shopTab,'m:shop:',btn)+actions(list+btn('Retour','home')));
+  screen((shopTab===0?'Améliorations':shopTab===1&&shopMode!=='store'?'Arsenal':'Boutique')+' · '+save.gold+' or',
+    tabs(tabLabels,shopTab,'m:shop:',btn)+btn('Cosmétiques','m:page:cosmetics')+actions(list+btn('Retour','home')));
 }
 
 function drawPreparation(ui){
@@ -115,9 +157,10 @@ function drawCollection(ui){
 export function drawMeta(page,ui){
   const {screen,actions,btn}=ui;
   if(page==='characters'||page==='prepareCharacters'){
-    screen('Personnages',actions(charactersList(ui,true)+btn('Retour','m:page:'+(page==='characters'?'home':'prepare'))));
+    heroGallery(ui,'m:page:'+(page==='characters'?'home':'prepare'));
   } else if(page==='prepare') drawPreparation(ui);
   else if(page==='shop') drawShop(ui);
+  else if(page==='quests') drawQuests(ui);
   else if(page==='collection') drawCollection(ui);
   else if(page==='options'||page==='pauseOptions') options(page==='options'?'home':'pauseMenu',ui);
   else if(page==='refund') screen('Rembourser les améliorations ?',actions(btn('Récupérer '+refundValue()+' or','m:refund','primary')+btn('Annuler','m:page:shop')));
@@ -143,11 +186,18 @@ export function handleMeta(action,page){
   const [,kind,value]=action.split(':'), id=Number(value);
   let bought;
   if(kind==='page') {
-    if(value==='arsenal'||value==='upgrades') { shopTab=value==='arsenal'?1:0; return 'shop'; }
+    if(value==='arsenal'||value==='upgrades'||value==='store') {
+      shopMode=value;shopTab=value==='upgrades'?0:1;return 'shop';
+    }
+    if(value==='quests'||value==='event') { questTab=value==='event'?1:0; return 'quests'; }
     if(value==='achievements'||value==='collection') { collectionTab=value==='achievements'?2:0; return 'collection'; }
     return value;
   }
-  if(kind==='shop') shopTab=id;
+  if(kind==='settings' && id>=0 && id<4) optionTab=id;
+  else if(kind==='quest' && (id===0||id===1)) questTab=id;
+  else if(kind==='previewWeapon' && weapons[id]) weaponPreview=id;
+  else if(kind==='previewHero' && characters[id]) heroPreview=id;
+  else if(kind==='shop') shopTab=id;
   else if(kind==='collection') collectionTab=id;
   else if(kind==='selectHero'){
     if(!ownsCharacter(id)) bought=unlockCharacter(id);
@@ -176,6 +226,8 @@ export function bindMetaVolumes(panel){
     if(key!=='musicVolume'&&key!=='sfxVolume') return;
     save.options[key]=Number(event.target.value)/100;
     setAudioVolumes();
+    const output=event.target.closest('label')?.querySelector('output');
+    if(output) output.value=event.target.value+' %';
   });
   panel.addEventListener('change',event=>{
     if(event.target.dataset.volume) persist();

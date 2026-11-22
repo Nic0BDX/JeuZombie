@@ -55,16 +55,18 @@ for (let i = 0; i < 16; i++) {
   tiles.push(ctx.canvas);
 }
 
-const recolor = (color) => frames.map(frame => {
+const recolor = (color, detail) => frames.map(frame => {
   const ctx=surface(16);
   ctx.drawImage(frame,0,0);
   ctx.globalCompositeOperation='source-atop';
   ctx.globalAlpha=.5;
   ctx.fillStyle=color;
   ctx.fillRect(0,0,16,16);
+  ctx.globalAlpha=1;
+  ctx.fillStyle=detail[0];ctx.fillRect(detail[1],detail[2],detail[3],detail[4]);
   return ctx.canvas;
 });
-const heroes={wanderer:frames,nettle:recolor('#74b892'),ember:recolor('#d17a47'),herbalist:recolor('#8b65ab'),fossil:recolor('#b7b2a1')};
+const heroes={wanderer:frames,nettle:recolor('#74b892',['#bfdb9b',3,5,2,4]),ember:recolor('#d17a47',['#c39562',4,3,7,2]),herbalist:recolor('#8b65ab',['#b7e797',3,8,2,3]),fossil:recolor('#b7b2a1',['#e4d8a3',5,4,5,3])};
 export function getSprite(name,frame) { return heroes[name][frame]; }
 
 export const creatures=[];

@@ -85,3 +85,79 @@ export function drawHomeArt(canvas) {
     if(y>85 && (x<184 || x>280 || y>336))block(i%5?'#c5574e83':'#ffd189',x,y,i%3?1:2,i%4?1:2);
   }
 }
+
+const portraits=[
+ ['#8f4b49','#352939','#c88867','#412733'],
+ ['#65806f','#25383c','#dca483','#513b37'],
+ ['#b27d46','#3d2e2b','#c18c67','#453235'],
+ ['#8870a1','#342541','#9f775f','#302a3a'],
+ ['#999876','#382e40','#ddd6ab','#434042']
+];
+const portraitCache=[];
+export function heroPortrait(index) {
+  if(portraitCache[index]) return portraitCache[index];
+  const canvas=document.createElement('canvas');
+  canvas.width=48;canvas.height=56;
+  const c=canvas.getContext('2d'), [lit,coat,skin,mark]=portraits[index];
+  function rect(color,x,y,w,h) { c.fillStyle=color;c.fillRect(x,y,w,h); }
+  function poly(color,xy) {
+    c.fillStyle=color;c.beginPath();c.moveTo(xy[0],xy[1]);
+    for(let i=2;i<xy.length;i+=2)c.lineTo(xy[i],xy[i+1]);
+    c.closePath();c.fill();
+  }
+  for(let y=0;y<56;y+=2) for(let x=0;x<48;x+=2) {
+    const d=Math.hypot(x-28,y-22);
+    rect(d<19?mark:d<23?coat:'#14111e',x,y,2,2);
+    if((x*7+y*13+index*5)%37<5)rect(lit,x,y,1,1);
+  }
+  poly('#110f19',[7,56,7,42,12,36,18,34,20,29,15,25,15,13,22,7,32,9,37,14,36,23,34,30,29,35,38,36,44,43,46,56]);
+  poly(coat,[8,55,12,41,21,37,30,36,39,40,44,55]);
+  poly(lit,[10,49,14,42,20,39,23,43,20,56,10,56]);
+  poly(mark,[24,41,31,38,38,43,41,56,26,56]);
+  poly(skin,[18,16,33,15,35,22,32,29,28,33,22,31,19,27]);
+  rect('#d69973',22,19,9,4);rect('#1b1720',22,21,3,1);rect('#17141d',30,21,3,1);
+  rect('#f5d3a1',23,21,1,1);rect('#f5d3a1',31,21,1,1);rect(mark,25,29,6,1);
+  if(index===0) {
+    poly(coat,[13,24,13,12,20,6,29,6,36,12,38,21,34,20,28,14,22,16,18,23]);
+    poly(lit,[16,27,35,25,33,33,27,38,19,35]);
+  } else if(index===1) {
+    poly('#2b2228',[17,16,16,12,21,7,27,7,35,12,35,18,29,14,22,15,20,21,17,30,13,35,14,27]);
+    rect(lit,30,39,6,2);
+  } else if(index===2) {
+    poly(lit,[17,10,31,9,37,14,36,17,13,17,15,14]);rect('#dcc399',19,14,13,1);
+    rect(mark,20,26,13,5);rect('#c49b63',31,43,2,10);
+  } else if(index===3) {
+    poly(lit,[13,19,12,15,20,6,31,5,38,14,40,20]);rect('#35233d',14,18,25,2);
+    rect('#a6d488',22,43,4,8);rect('#d8bb76',22,42,4,2);
+  } else {
+    rect('#271a25',21,21,5,4);rect('#271a25',30,21,4,4);
+    rect('#d05159',22,22,2,2);rect('#d05159',31,22,2,2);
+    rect('#17131b',25,28,7,3);for(let x=25;x<32;x+=2)rect('#ded2a4',x,28,1,2);
+  }
+  return portraitCache[index]=canvas.toDataURL?.()??'';
+}
+
+const weaponCache=new Map();
+export function armPortrait(weapon) {
+  if(weaponCache.has(weapon.id)) return weaponCache.get(weapon.id);
+  const surface=document.createElement('canvas');surface.width=40;surface.height=25;
+  const c=surface.getContext('2d'), color=weapon.color;
+  const block=(x,y,w,h,fill=color)=>{c.fillStyle=fill;c.fillRect(x,y,w,h);};
+  for(let i=0;i<5;i++)block(5+i*6,20-i*3,2,2,'#6c4b5f');
+  if(weapon.type==='target'||weapon.type==='direction') {
+    block(6,13,23,5,'#201823');block(12,11,23,3,color);block(14,14,11,4);
+    block(10,16,8,5,'#82464d');block(8,19,6,2,'#af6f65');block(21,15,3,5,'#c18377');
+    if(weapon.type==='direction'){block(28,6,2,16);block(25,8,8,2);block(25,18,8,2);}
+  } else if(weapon.type==='arc'||weapon.type==='bounce'||weapon.type==='return') {
+    for(let i=0;i<13;i++)block(7+i,21-i,3,2,'#ab7962');
+    block(19,8,15,3);block(22,5,10,3);block(30,11,4,4);block(19,11,7,3,'#e8cdb1');
+  } else if(weapon.type==='ally') {
+    block(8,12,20,8);block(26,9,7,9);block(28,6,2,5);block(32,12,5,3);
+    block(10,19,3,4);block(25,19,3,4);block(28,12,2,2,'#261c29');
+  } else {
+    block(12,10,16,10,'#48293b');block(14,8,12,12);block(17,6,6,15);
+    block(18,9,4,6,'#fff1be');block(10,21,20,1,'#9f5e6c');
+    if(weapon.type==='lightning'){block(18,3,7,3);block(26,6,3,5);block(12,12,3,4);}
+  }
+  const src=surface.toDataURL?.()??'';weaponCache.set(weapon.id,src);return src;
+}

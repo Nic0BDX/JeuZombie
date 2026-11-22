@@ -31,6 +31,7 @@ export function drawHome(panel) {
       '<span>'+fmt.format(p.earned)+' / '+fmt.format(p.goal)+' XP</span></div></header>'+
     '<section class="hub-hero"><div class="hub-title"><span>LES CENDRES DU</span><h1>MARAIS</h1></div>'+
       '<button class="hub-online" type="button" data-do="m:page:friends"><b></b> '+online+' ami'+(online===1?'':'s')+' en ligne</button>'+
+      '<button class="hub-event" type="button" data-do="m:page:event"><small>ÉVÉNEMENT</small><strong>Marée des Braises</strong><b aria-hidden="true">›</b></button>'+
       '<div class="hub-play"><button class="hub-primary" type="button" data-do="m:page:prepare"><i aria-hidden="true">'+icons.versus+
       '</i><span><strong>JOUER</strong><small>Survie solo</small></span><b aria-hidden="true">›</b></button>'+
       '<button class="hub-coop" type="button" data-do="m:page:friends">'+icons.people+' Coop</button></div></section>'+
@@ -40,5 +41,5 @@ export function drawHome(panel) {
       (cosmetics.available?(cosmetics.chestAvailable?'Récompense disponible':'Coffre du jour déjà ouvert'):'Récompense quotidienne')+
       '</small></div><button type="button" data-do="m:page:cosmetics">Voir <span aria-hidden="true">›</span></button></section>'+
     '<nav class="hub-nav" aria-label="Menu principal">'+item(icons.home,'Accueil','home')+item(icons.stats,'Combats','combat')+
-      item(icons.quest,'Succès','achievements')+item(icons.store,'Boutique','cosmetics')+item(icons.people,'Amis','friends')+'</nav>';
+      item(icons.quest,'Quêtes','quests')+item(icons.store,'Boutique','store')+item(icons.people,'Amis','friends')+'</nav>';
 }

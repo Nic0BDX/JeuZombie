@@ -1,5 +1,6 @@
 import { activeWorld, updateCoopWorld, queueCoopCommand, localActor, worldMap, renderTeam, actorAppearance, splitCoopGold } from './coop-world.js';
 import { activeCosmetics, cosmeticSprite, primeCosmeticSprite } from './cosmetics.js';
+import { redTide, fieldKit } from './data/modes.js';
 import { startCombat, finishCombat, combatHit, combatTaken, combatHeal, combatLevel, combatDeath, combatEquip } from './combat-log.js';
 import { finishRewards, trackKill, trackWeapon, trackEvolution } from './meta.js';
 import { player, updatePlayer, resetPlayer, stats, passiveLevels, useHero } from './player.js';
@@ -21,6 +22,8 @@ import { save, persist } from './save.js';
 
 const soloRun={ mode:'menu', elapsed:0, xp:0, goal:xpGoal(1,1), level:1, kills:0, gold:0, paid:0, rerolls:cardTools.rerolls, skips:cardTools.skips, banishes:cardTools.banishes, chests:0, reward:-1, boss:-1, enemyCount:0 };
 export let run=soloRun;
+export const kitStatus={salves:0,pulse:0};
+let soloVariant=false,pulseFx=0;
 let actor=0, soloAppearance=null;
 function appearance(index=actor) { return activeWorld()?actorAppearance(index):soloAppearance; }
 export function useGameSlot(slot=null) {
@@ -48,11 +51,13 @@ export function background() {
   bank();
 }
 
-export function start(character, startingWeapon=characters[character].weapon, shared=null) {
+export function start(character, startingWeapon=characters[character].weapon, shared=null, variant=false) {
   if(!shared) {
     useGameSlot();
-    tuneEnemies();
-    startCombat(character,{weapon:startingWeapon});
+    soloVariant=variant;
+    kitStatus.salves=1; kitStatus.pulse=pulseFx=0;
+    tuneEnemies(variant?redTide.health:1);
+    startCombat(character,{weapon:startingWeapon,...(variant?{difficulty:'ardue',map:'tourbiere'}:{})});
     soloAppearance=activeCosmetics(character);
     primeCosmeticSprite(character,soloAppearance?.skin??soloAppearance?.character);
   }
@@ -220,13 +225,30 @@ export function resize(canvas) {
   vignette.addColorStop(1, '#101018b8');
 }
 
+export function useFieldKit(action) {
+  if(activeWorld() || run.mode!=='playing' || player.hp<=0) return;
+  if(action==='heal' && kitStatus.salves && player.hp<stats.health) {
+    kitStatus.salves--; heal(fieldKit.salve); sound(soundIds.gem);
+  } else if(action==='pulse' && kitStatus.pulse<=0) {
+    const pulse=fieldKit.pulse;
+    kitStatus.pulse=pulse.cooldown; pulseFx=.34;
+    sound(soundIds.evolve);
+    for(let i=0;i<mobs.length;i++) {
+      const m=mobs[i];
+      if(m.active && (m.x-player.x)**2+(m.y-player.y)**2<=pulse.radius**2) hit(m,pulse.damage*stats.force,false);
+    }
+  }
+}
+
 export function update(dt) {
   if(activeWorld()) { updateCoopWorld(dt); animateEffects(dt); return; }
   if(run.mode!=='playing') return;
   run.elapsed+=dt;
+  kitStatus.pulse=Math.max(0,kitStatus.pulse-dt);
+  pulseFx=Math.max(0,pulseFx-dt);
   readInput();
   updatePlayer(dt,movement.x,movement.y);
-  if(updateWaves(dt,run.elapsed,scene.width,scene.height)) { sound(7); shake=.3; if(run.elapsed>=900) bossSpawned=true; }
+  if(updateWaves(dt,run.elapsed,scene.width,scene.height,soloVariant?redTide.density:1)) { sound(7); shake=.3; if(run.elapsed>=900) bossSpawned=true; }
   const minute=Math.min(14,Math.floor(run.elapsed/60));
   updateEnemies(dt,minute,hurt,enemyShot,hit);
   updateWeapons(dt,scene.width,scene.height,hit,hurt);
@@ -263,7 +285,7 @@ export function render() {
   const left=Math.round(player.x+Math.sin(run.elapsed*150)*jitter)-cx;
   const top=Math.round(player.y+Math.cos(run.elapsed*131)*jitter)-cy;
   const px=Math.round(player.x)-left, py=Math.round(player.y)-top;
-  const tiles=terrainVariants[worldMap()];
+  const tiles=terrainVariants[activeWorld()?worldMap():soloVariant?redTide.map:0];
   for (let y = Math.floor(top / 32); y * 32 < top + scene.height; y++) {
     for (let x = Math.floor(left / 32); x * 32 < left + scene.width; x++) {
       art.drawImage(tiles[tileHash(x, y) & 15], x * 32 - left, y * 32 - top);
@@ -271,6 +293,10 @@ export function render() {
   }
   renderEntities(left,top);
   renderTeam(art,left,top,scene.width,scene.height);
+  if(!activeWorld() && pulseFx>0) {
+    art.strokeStyle='#ffc27b';art.globalAlpha=pulseFx/.34;art.lineWidth=2;
+    art.beginPath();art.arc(px,py,fieldKit.pulse.radius*(1-pulseFx/.40),0,Math.PI*2);art.stroke();art.globalAlpha=1;
+  }
   const look=appearance();
   if(look?.trail && player.stride>0 && !reduced) {
     art.fillStyle=look.trail.color;

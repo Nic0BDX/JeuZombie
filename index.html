@@ -137,11 +137,54 @@ summary{min-height:48px;padding:12px 8px;cursor:pointer;text-align:left;backgrou
 .hub-nav button:first-child{background:#54252b;border-color:#dd765e}
 .hub-nav button:hover,.hub-tiles button:hover,.hub-header button:hover{border-color:#e48f72}
 @media(orientation:landscape) and (max-height:500px){.hub-hero{min-height:245px}.hub-title{margin-top:9px}}
+
+#menu[data-meta-page]:not([data-meta-page=home]) #panel{border-color:#9a554f;background:linear-gradient(150deg,#342029,#211923 48%,#1a1821);box-shadow:0 0 24px #140d1b}
+#menu[data-meta-page]:not([data-meta-page=home]) #panel>h2{background:linear-gradient(90deg,#722a33,#3e2230 76%,transparent);padding:9px;text-align:left;border-left:3px solid #ef9675;text-transform:uppercase;font-size:20px}
+#panel .primary{background:#702932;border-color:#e87e66}
+.hub-online{top:61%}
+.hub-event{position:absolute;right:6px;top:35%;display:grid;text-align:left;padding:5px 26px 5px 9px;min-height:52px;border-color:#d76c68;background:linear-gradient(115deg,#54212edc,#251323e8)}
+.hub-event small{font:700 10px monospace;color:#ffc5a5}
+.hub-event strong{font:bold 13px monospace;color:#ff937e}
+.hub-event b{position:absolute;right:9px;top:11px;font:700 22px monospace;color:#f18f76}
+.loadout-grid,.hero-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:9px 0}
+.hero-card,.loadout-card{display:grid;gap:2px;justify-items:center;align-items:center;min-width:0;padding:6px 2px;background:linear-gradient(150deg,#302533,#1a1822);border-color:#73555d;text-align:center;font:700 12px monospace;color:#f4e3d4}
+.hero-card.current,.loadout-card.current{background:#512733;border-color:#ea8c72}
+.hero-card img,.loadout-card img{image-rendering:pixelated;object-fit:contain}
+.hero-card img{width:100%;height:84px}
+.loadout-card img{width:75%;height:49px}
+.hero-card small,.loadout-card small{color:#e3b799;font-size:11px}
+.loadout-detail,.raid-card{text-align:left;padding:9px 11px;margin:8px 0;border:1px solid #936259;background:#1a1620}
+.loadout-detail h3,.raid-card h3{font:700 18px monospace;color:var(--accent,#f6bc95);margin:2px 0 7px}
+.loadout-detail button,.raid-card button{width:100%;margin-top:6px}
+.stat-meter{display:grid;grid-template-columns:70px 1fr;gap:8px;align-items:center;font:700 12px monospace;margin:4px 0}
+.stat-meter>b{height:7px;background:#351f2b}.stat-meter i{display:block;height:100%;background:#da775c}
+.upgrade-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:7px 0}
+.upgrade-grid .card{min-height:84px;padding:6px;grid-template-columns:18px 1fr;border-color:#85515a;background:#30202b}
+.upgrade-grid .card b:first-child{font-size:15px;color:#fda284}
+.upgrade-grid .card small{font-size:11px}
+.quest-row{display:grid;gap:3px;text-align:left;padding:7px 9px;margin:5px 0;background:#211a25;border:1px solid #6b4650}
+.quest-row progress{width:100%;height:8px;accent-color:#f2a574}
+.quest-row small{color:#efbc9b}
+.meta-volume output{justify-self:end;color:#f8ad8d}
+.meta-volume input{grid-column:1/-1;min-height:38px;accent-color:#ed765e;touch-action:none}
+.hud-top{gap:5px;grid-template-columns:minmax(78px,1fr) 1fr 48px;align-items:start;padding:5px 8px}
+#pause{grid-column:3;grid-row:1;justify-self:end;background:#241821e8;border-color:#a95552}
+#hud-health{grid-column:1;grid-row:1;padding:5px 7px;background:#281820eb;border:1px solid #a24b4b;color:#ffded3;align-self:stretch}
+#hud-health .track{height:5px;margin-top:4px}#health-fill{background:#e65a5f}
+#hud-tally{grid-column:2;grid-row:1;text-align:center;padding-top:3px;color:#fae3c6;text-shadow:1px 2px #05050a}
+#hud-tally small{display:flex;gap:6px;justify-content:center;font:700 12px monospace;color:#e5bca3}#clock{font-size:14px}
+#field-kit{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 19px);right:calc(env(safe-area-inset-right) + 12px);display:grid;gap:8px}
+#field-kit button{pointer-events:auto;min-width:58px;min-height:54px;border-radius:50%;border-color:#dc795b;background:#582d36eb;font:bold 14px monospace;box-shadow:inset 0 0 0 2px #281623}
+#field-kit button:disabled{opacity:.72;color:#cfa693;background:#2a2029}
+.left-handed #field-kit{right:auto;left:calc(env(safe-area-inset-left) + 12px)}
 </style>
 <canvas aria-label="Les Cendres du Marais"></canvas>
 <div id="hud" hidden>
   <div class="track"><i id="experience"></i></div>
-  <div class="hud-top"><button id="pause" type="button" aria-label="Pause">Ⅱ</button><span id="clock"></span><span id="level"></span></div>
+  <div class="hud-top"><div id="hud-health"><span aria-hidden="true">♥</span> <span id="health-text"></span><div class="track"><i id="health-fill"></i></div></div>
+    <div id="hud-tally"><span id="wave"></span><small><span id="clock"></span><span id="kills"></span><span id="level"></span></small></div>
+    <button id="pause" type="button" aria-label="Pause">Ⅱ</button></div>
+  <div id="field-kit" aria-label="Équipement de terrain" hidden><button type="button" data-field="pulse">Onde</button><button type="button" data-field="heal" aria-label="Kit de soin">✚ 1</button></div>
   <div id="boss" hidden><span></span><div class="track"><i></i></div></div>
   <div id="kit"></div>
 </div>
