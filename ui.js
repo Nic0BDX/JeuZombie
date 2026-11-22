@@ -92,7 +92,13 @@ function options(returnTo) {
 
 function drawKit() {
   let text='';
-  for(let i=0;i<levels.length;i++) if(levels[i]) text+='<span title="'+weapons[i].name+'">'+weapons[i].icon+' '+(evolved[i]?'★':levels[i])+'</span>';
+  let occupied=0;
+  for(let i=0;i<levels.length;i++) if(levels[i]) {
+    const w=weapons[i], name=evolved[i] ? w.evolution.nomEvolue : w.nom;
+    text+='<span title="'+name+'">'+w.icon+' '+(evolved[i]?'★':'')+levels[i]+'</span>';
+    occupied++;
+  }
+  for(let i=occupied;i<slots;i++) text+='<span class="empty" aria-label="Emplacement d’arme libre">·</span>';
   for(let i=0;i<passiveLevels.length;i++) if(passiveLevels[i]) text+='<span style="color:#8fd8c2" title="'+passives[i][0]+'">◆ '+passiveLevels[i]+'</span>';
   if(kit.innerHTML!==text) kit.innerHTML=text;
 }
