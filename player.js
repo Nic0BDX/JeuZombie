@@ -1,5 +1,6 @@
 import { characters } from './data/characters.js';
-import { initialStats, passives, shop } from './data/passives.js';
+import { initialStats, passives } from './data/passives.js';
+import { shop } from './data/shop.js';
 import { save } from './save.js';
 
 export const player = { x:0, y:0, facing:1, frame:0, stride:0, sprite:'wanderer', dx:1, dy:0, hp:100, inv:0, character:0 };

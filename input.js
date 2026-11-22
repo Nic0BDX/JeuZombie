@@ -1,3 +1,4 @@
+import { save } from './save.js';
 const keys = new Set();
 const directions = ['KeyA', 'KeyQ', 'ArrowLeft', 'KeyD', 'ArrowRight', 'KeyW', 'KeyZ', 'ArrowUp', 'KeyS', 'ArrowDown'];
 const radius = 48;
@@ -24,6 +25,7 @@ function release() {
 export function bindInput(canvas) {
   canvas.addEventListener('pointerdown', event => {
     if (pointer !== null || event.button !== 0 || event.clientY < canvas.clientHeight / 2) return;
+    if(save.options.leftHanded && event.clientX>canvas.clientWidth*.67) return;
     canvas.setPointerCapture(event.pointerId);
     pointer = event.pointerId;
     stick.active = true;

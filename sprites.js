@@ -64,7 +64,7 @@ const recolor = (color) => frames.map(frame => {
   ctx.fillRect(0,0,16,16);
   return ctx.canvas;
 });
-const heroes={wanderer:frames,nettle:recolor('#74b892'),ember:recolor('#d17a47')};
+const heroes={wanderer:frames,nettle:recolor('#74b892'),ember:recolor('#d17a47'),herbalist:recolor('#8b65ab'),fossil:recolor('#b7b2a1')};
 export function getSprite(name,frame) { return heroes[name][frame]; }
 
 export const creatures=[];

@@ -1,3 +1,4 @@
+import { finishRewards, trackKill, trackWeapon, trackEvolution } from './meta.js';
 import { player, updatePlayer, resetPlayer, stats, passiveLevels } from './player.js';
 import { readInput, movement, stick } from './input.js';
 import { getSprite, tiles, tileHash, creatures, buildCreatures, ghostHound } from './sprites.js';
@@ -34,7 +35,8 @@ export function background() {
   bank();
 }
 
-export function start(character) {
+export function start(character, startingWeapon=characters[character].weapon) {
+  run.score=run.bossKills=run.firstWinBonus=run.achievementGold=0;
   run.mode='playing'; run.elapsed=run.xp=run.kills=run.gold=run.paid=run.chests=0;
   run.level=1; run.reward=run.boss=-1; run.enemyCount=0;
   bossSpawned=false; impact=shake=cursor=0;
@@ -43,13 +45,14 @@ export function start(character) {
   run.rerolls=cardTools.rerolls+stats.rerolls;
   run.skips=cardTools.skips; run.banishes=cardTools.banishes+stats.banishes;
   resetCards();
-  resetWeapons(characters[character].weapon); refreshWeapons(); resetWaves();
+  resetWeapons(startingWeapon); trackWeapon(startingWeapon); refreshWeapons(); resetWaves();
   for(let i=0;i<mobs.length;i++) mobs[i].active=false;
   resetLoot();
   for(let i=0;i<effects.length;i++) effects[i].life=0;
 }
 
 function finish(mode) {
+  run.gold+=finishRewards(run,mode==='won',stats.goldGain);
   run.mode=mode;
   sound(mode==='won' ? soundIds.victory : soundIds.defeat);
   bank();
@@ -65,6 +68,7 @@ export function choose(id) {
   } else {
     const growth=stats.growth;
     upgrade(id);
+    if(id>=0 && id<levels.length) trackWeapon(id);
     sound(soundIds.choose);
     if(stats.growth!==growth) {
       run.xp*=stats.growth/growth;
@@ -98,6 +102,7 @@ function hit(m,damage,critical) {
   if(impact<=0) { sound(1); impact=.075; }
   if(m.hp>0) return;
   m.active=false; run.kills++;
+  trackKill(m.kind); if(m.kind>=6) run.bossKills++;
   drop(0,m.x,m.y,enemies[m.kind].xp);
   if(m.kind===8) run.chests++;
   else if(m.kind>=5) drop(5,m.x,m.y);
@@ -138,7 +143,7 @@ function collect(kind,value) {
 
 function interrupt() {
   if(run.chests) {
-    run.chests--; run.reward=reward(); addGold(chestGold);
+    run.chests--; run.reward=reward(); if(run.reward>=levels.length) trackEvolution(run.reward-levels.length); addGold(chestGold);
     sound(run.reward>=weapons.length ? soundIds.evolve : soundIds.chest); vibrate(45); run.mode='chest';
   } else if(run.xp>=run.goal) {
     run.xp-=run.goal; run.level++; run.goal=xpGoal(run.level,stats.growth);

@@ -1,3 +1,4 @@
+import { trackEnemy } from './meta.js';
 import { enemies } from './data/enemies.js';
 import { caps, damageGrowth, hpGrowth } from './data/waves.js';
 import { player } from './player.js';
@@ -24,7 +25,7 @@ export function spawn(kind,x,y,minute) {
   for (let i=0;i<mobs.length;i++) {
     const m=mobs[i];
     if (m.active) continue;
-    m.active=true; m.kind=kind; m.x=x; m.y=y; m.flash=0; m.burn=m.poison=m.slow=m.stun=m.tick=m.kx=m.ky=m.knock=m.burnDmg=m.poisonDmg=0;
+    trackEnemy(kind); m.active=true; m.kind=kind; m.x=x; m.y=y; m.flash=0; m.burn=m.poison=m.slow=m.stun=m.tick=m.kx=m.ky=m.knock=m.burnDmg=m.poisonDmg=0;
     m.max=m.hp=enemies[kind].hp*(kind>=6 ? 1 : 1+minute*hpGrowth);
     m.fire=enemies[kind].fire;
     return;

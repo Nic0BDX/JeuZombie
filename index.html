@@ -57,6 +57,26 @@ p{margin:5px 0 12px}
 .chest{font-size:46px;color:#ffd98d;animation:open .45s ease-out}
 @keyframes open{0%{transform:scale(.2) rotate(-15deg);opacity:.2}70%{transform:scale(1.18)}}
 @media(max-height:420px){#panel{padding:10px}h1,h2,p{margin-bottom:5px}.actions{gap:4px}}
+#menu[data-meta-page="home"]{isolation:isolate;overflow:hidden}
+#menu[data-meta-page="home"]::before,#menu[data-meta-page="home"]::after{content:"";position:absolute;inset:-18%;z-index:-1;pointer-events:none}
+#menu[data-meta-page="home"]::before{background:radial-gradient(ellipse at 30% 45%,#72817d48 0%,transparent 57%),radial-gradient(ellipse at 74% 62%,#a5a89c26 0%,transparent 50%);animation:marsh-fog 12s ease-in-out infinite alternate}
+#menu[data-meta-page="home"]::after{background:radial-gradient(circle at 23% 37%,#d9985a 1px,transparent 3px),radial-gradient(circle at 76% 48%,#dfa062 1px,transparent 3px),radial-gradient(circle at 53% 27%,#f5a864 1px,transparent 3px),radial-gradient(circle at 43% 57%,#eac281 1px,transparent 3px);animation:marsh-embers 8s ease-in infinite}
+@keyframes marsh-fog{from{transform:translateX(-12%)}to{transform:translateX(12%)}}
+@keyframes marsh-embers{0%{opacity:0;transform:translateY(12%)}40%{opacity:.8}100%{opacity:0;transform:translateY(-18%)}}
+@media(prefers-reduced-motion:reduce){#menu::before,#menu::after{animation:none!important}}
+.meta-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-bottom:9px}
+.meta-tabs button{padding-inline:2px;min-width:0;font-size:clamp(10px,3.4vw,14px);overflow-wrap:anywhere}
+.meta-bonuses,.collection-list{list-style:none;text-align:left;padding:0;margin:8px 0 12px}
+.collection-list li,.meta-bonuses li{background:#302f3b;padding:8px;border-bottom:1px solid #4d4656}
+.collection-list small{display:block;color:#ddd4d5;font-size:14px}
+.meta-volume{display:grid;grid-template-columns:auto minmax(100px,1fr);min-height:48px;align-items:center;gap:12px;text-align:left}
+.meta-volume input{width:100%;accent-color:#9bc9a9}
+summary{min-height:48px;padding:12px 8px;cursor:pointer;text-align:left;background:#373442}
+.left-handed #pause{grid-column:3;grid-row:1;justify-self:end}
+.left-handed #clock{grid-column:2;grid-row:1}
+.left-handed #level{grid-column:1;grid-row:1}
+.left-handed #kit{left:auto;right:calc(env(safe-area-inset-right) + 10px)}
+
 </style>
 <canvas aria-label="Les Cendres du Marais"></canvas>
 <div id="hud" hidden>
