@@ -94,6 +94,49 @@ summary{min-height:48px;padding:12px 8px;cursor:pointer;text-align:left;backgrou
 #quick-emotes>div{display:grid;grid-template-columns:repeat(2,minmax(48px,1fr));gap:4px}
 .left-handed #quick-emotes{right:auto;left:calc(env(safe-area-inset-left) + 8px);justify-items:start}
 #choice-timer{color:#ffdc93;font:inherit}
+
+#menu[data-meta-page=home]{display:block;padding:0;background:#100d17;overflow:hidden}
+#home-art{display:none}
+#menu[data-meta-page=home] #home-art{display:block;position:absolute;top:65px;left:50%;transform:translateX(-50%);width:min(100%,560px);height:min(63dvh,570px);object-fit:cover;object-position:center 61%;pointer-events:none}
+#menu[data-meta-page=home] #panel{display:block;position:relative;width:min(100%,560px);height:100%;margin:auto;max-height:100%;border:0;border-radius:0;background:linear-gradient(180deg,#120e18 0,#120e1877 18%,transparent 42%,#120e184d 50%,#120e18 75%);padding:calc(10px + env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(10px,env(safe-area-inset-left));box-shadow:none;overflow:auto;overscroll-behavior:contain}
+.hub-header{display:grid;grid-template-columns:minmax(100px,1fr) auto auto 48px;gap:5px;text-align:left}
+.hub-header button{border-color:#755054;background:linear-gradient(125deg,#3a2833,#19171e 75%);font-family:monospace;padding:4px 7px;display:flex;gap:6px;align-items:center;justify-content:center}
+.hub-header .hub-profile{justify-content:start;min-width:0}
+.hub-profile span{display:grid;min-width:0;gap:0;text-align:left}
+.hub-profile strong{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hub-profile small{color:#e9ad86;font-size:14px}
+.hub-profile i,.hub-currency i,.hub-reward i{font:normal bold 20px monospace;color:#ffbc71}
+.hub-header .hub-currency{min-width:52px;font-size:15px;color:#ffe1ac}
+.hub-header .hub-currency.cosmetics,.hub-header .hub-currency.cosmetics i{color:#dfabfa}
+.hub-settings{font-size:21px}
+.hub-xp{grid-column:1/-1;display:flex;align-items:center;gap:8px;font:bold 12px monospace;color:#edcba8}
+.hub-meter{flex:1;height:8px;background:#221823;border:1px solid #89463f;padding:1px}
+.hub-meter b{display:block;height:100%;background:linear-gradient(90deg,#ac3929,#ffb971)}
+.hub-hero{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;min-height:clamp(290px,49dvh,505px);padding:16px 7px 10px;text-align:left}
+.hub-title{margin-top:clamp(7px,4dvh,44px);font:900 clamp(13px,4vw,19px) monospace;letter-spacing:.18em;color:#f6d3b5;text-shadow:2px 2px #181019}
+.hub-title h1{margin:0;font:italic 1000 clamp(49px,13vw,84px)/.95 Impact,'Arial Black',sans-serif;letter-spacing:-.035em;color:#fff1d8;text-shadow:2px 2px #801e26,4px 4px #3e1724,0 0 21px #b84842}
+.hub-online{position:absolute;right:6px;top:48%;font:700 12px monospace;min-height:48px;color:#f0e5d4;background:#1e191fdd;border-color:#947164;padding:5px 8px}
+.hub-online b{display:inline-block;width:7px;height:7px;border-radius:100%;background:#b2de8d;margin-right:1px}
+.hub-play{width:100%;display:grid;gap:7px;grid-template-columns:1fr 85px;align-items:stretch}
+.hub-play .hub-primary{min-height:65px;display:flex;align-items:center;gap:12px;padding:5px 12px;text-align:left;background:linear-gradient(120deg,#a83031,#631c23 72%,#311622);border:1px solid #ff885e;box-shadow:inset 0 0 0 2px #32131a,0 5px 0 #3a1721;color:#fff0d8}
+.hub-primary span{flex:1;display:grid}
+.hub-primary strong{font:900 27px/.95 Impact,'Arial Black',sans-serif;letter-spacing:.08em}
+.hub-primary small{font:700 13px monospace;color:#ffc190}
+.hub-primary i,.hub-primary b{font:normal bold 29px monospace;color:#ffb58d}
+.hub-coop{font:bold 15px monospace;border-color:#94604d;background:#2b212c}
+.hub-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:11px 0 8px}
+.hub-tiles button,.hub-nav button{min-width:0;display:grid;gap:1px;justify-items:center;align-content:center;padding:4px 2px;border-color:#63454b;background:linear-gradient(#2b222b,#1a161d);font:bold clamp(10px,2.85vw,14px) monospace}
+.hub-tiles i,.hub-nav i{font:normal bold 21px monospace;color:#edb490}
+.hub-tiles button{min-height:60px}
+.hub-reward{display:flex;align-items:center;gap:9px;text-align:left;border:1px solid #785472;background:linear-gradient(105deg,#422b47,#271e2b 75%);padding:5px 7px;margin:6px 0 10px}
+.hub-reward div{flex:1;display:grid;font:bold 14px monospace}
+.hub-reward small{font:12px monospace;color:#e1bbdb}
+.hub-reward i{color:#e4a6ff;margin-left:4px}
+.hub-reward button{border-color:#976988;font:bold 13px monospace;background:#352538}
+.hub-nav{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:5px 0 7px;background:#120e18;position:sticky;bottom:0}
+.hub-nav button:first-child{background:#54252b;border-color:#dd765e}
+.hub-nav button:hover,.hub-tiles button:hover,.hub-header button:hover{border-color:#e48f72}
+@media(orientation:landscape) and (max-height:500px){.hub-hero{min-height:245px}.hub-title{margin-top:9px}}
 </style>
 <canvas aria-label="Les Cendres du Marais"></canvas>
 <div id="hud" hidden>
@@ -104,6 +147,6 @@ summary{min-height:48px;padding:12px 8px;cursor:pointer;text-align:left;backgrou
 </div>
 <aside id="quick-emotes" aria-label="Emotes rapides" hidden></aside>
 <aside id="social-banner" aria-label="Invitations" hidden></aside>
-<section id="menu"><div id="panel"></div></section>
+<section id="menu"><canvas id="home-art" aria-hidden="true"></canvas><div id="panel"></div></section>
 <output id="fps">– FPS</output>
 <script type="module" src="./main.js"></script>

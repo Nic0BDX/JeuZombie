@@ -1,5 +1,6 @@
 import { activeCosmetics } from './cosmetics.js';
 import { selectedCharacter } from './meta.js';
+import { accountProgress } from './home.js';
 import { account, changePseudo, sendAccountLink, synchronize } from './online.js';
 
 const messages={
@@ -13,6 +14,7 @@ const escape=text=>String(text??'').replace(/[&<>"']/g,ch=>({ '&':'&amp;','<':'&
 export function drawProfile(ui) {
   const {profile,status,secured,busy,notice}=account;
   const disabled=busy?' disabled':'';
+  const progress=accountProgress();
   const style=activeCosmetics(selectedCharacter());
   let forms='';
   if(profile) {
@@ -29,7 +31,7 @@ export function drawProfile(ui) {
   }
   const retry=status==='error' || status==='offline' ? ui.btn('Réessayer','accountRetry') : '';
   const badge=style?.title||style?.frame ? '<p style="border:1px solid '+escape(style.frame?.color??'#696375')+'">'+escape(style.title?.name??profile?.pseudo??'Profil')+'</p>' : '';
-  ui.screen('Profil',badge+'<p role="status">'+escape(messages[status])+'</p>'+
+  ui.screen('Profil','<p>Niveau '+progress.level+' · '+progress.xp+' XP cumulés</p>'+badge+'<p role="status">'+escape(messages[status])+'</p>'+
     (notice?'<p role="status">'+escape(notice)+'</p>':'')+forms+ui.actions(retry+ui.btn('Retour','m:page:home')));
 }
 

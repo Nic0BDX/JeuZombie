@@ -114,10 +114,7 @@ function drawCollection(ui){
 
 export function drawMeta(page,ui){
   const {screen,actions,btn}=ui;
-  if(page==='home'){
-    screen('Les Cendres du Marais','<p>'+save.gold+' or</p>'+actions(btn('Jouer','m:page:prepare','primary')+
-      btn('Personnages','m:page:characters')+btn('Boutique','m:page:shop')+btn('Collection','m:page:collection')+btn('Profil','m:page:profile')+btn('Amis','m:page:friends')+btn('Cosmétiques','m:page:cosmetics')+btn('Combats','m:page:combat')+btn('Options','m:page:options')),'h1');
-  } else if(page==='characters'||page==='prepareCharacters'){
+  if(page==='characters'||page==='prepareCharacters'){
     screen('Personnages',actions(charactersList(ui,true)+btn('Retour','m:page:'+(page==='characters'?'home':'prepare'))));
   } else if(page==='prepare') drawPreparation(ui);
   else if(page==='shop') drawShop(ui);
@@ -145,7 +142,11 @@ export function drawRunResult(run,time,levels,evolved,ui){
 export function handleMeta(action,page){
   const [,kind,value]=action.split(':'), id=Number(value);
   let bought;
-  if(kind==='page') return value;
+  if(kind==='page') {
+    if(value==='arsenal'||value==='upgrades') { shopTab=value==='arsenal'?1:0; return 'shop'; }
+    if(value==='achievements'||value==='collection') { collectionTab=value==='achievements'?2:0; return 'collection'; }
+    return value;
+  }
   if(kind==='shop') shopTab=id;
   else if(kind==='collection') collectionTab=id;
   else if(kind==='selectHero'){

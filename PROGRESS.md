@@ -1,7 +1,6 @@
 # Progression
-- ONLINE P3 à P5 intégrées : coop de 2 à 4, cosmétiques et Points de Cendre, résultats et historique.
-- Fichiers clés : coop-world.js, coop-net.js, cosmetics.js, combat-log.js et supabase/online-p3 à p5.sql.
-- Appliquer migration.sql, puis les migrations ONLINE P2 à P5 dans l’ordre.
-- Vercel : SUPABASE_URL et SUPABASE_PUBLISHABLE_KEY pour Preview. Aucun projet Supabase lié.
-- Le combat de l’hôte est mis en attente après une coupure et envoyé à son retour. Sans retour de l’hôte, les invités conservent leur bilan local mais ne reçoivent pas de crédit cloud.
-- Transport, configuration RLS, achats et crédits réels à valider sur plusieurs téléphones.
+- Accueil mobile refait : décor pixel art original généré par code, niveau, XP, portefeuilles et navigation directe.
+- Compte neuf : niveau 0, 0 XP, 0 or, 0 Point de Cendre. Niveau calculé à partir du score cumulé synchronisé.
+- Fichiers clés : home.js, home-art.js, index.html, ui.js, meta-ui.js, profile-ui.js et sw.js.
+- Jouer, coop, arsenal, améliorations, personnages, collection, Combats, succès et coffre reliés aux fonctions existantes.
+- Supabase reste à configurer pour le cloud, la coop et les récompenses connectées.

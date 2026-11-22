@@ -5,6 +5,7 @@ import { selectedCharacter } from './meta.js';
 import { drawCosmetics, bindCosmetics, cosmeticsState } from './cosmetics-ui.js';
 import { drawCombat, drawCombatResult, openCombatHistory, bindCombat } from './combat-ui.js';
 import { bindSocial, drawSocial, socialMode } from './social-ui.js';
+import { drawHome, initHomeArt } from './home.js';
 import { drawProfile, bindProfile, retryProfile } from './profile-ui.js';
 import { bindMetaVolumes, drawMeta, drawRunResult, handleMeta } from './meta-ui.js';
 import { run, start, background, choose, reroll, skip, banishCard, dismissChest } from './game.js';
@@ -26,7 +27,7 @@ const kit=document.querySelector('#kit'), pause=document.querySelector('#pause')
 const percent=Array.from({length:101},(_,i)=>i+'%');
 const digits=Array.from({length:60},(_,i)=>String(i).padStart(2,'0'));
 const times=Array.from({length:3601},(_,i)=>digits[Math.floor(i/60)%60]+':'+digits[i%60]);
-let previous='', page='welcome', lastSecond=-1, lastLevel=0, lastXp=-1, lastBoss=-2, lastBossHp=-1, banishMode=false;
+let previous='', page='home', lastSecond=-1, lastLevel=0, lastXp=-1, lastBoss=-2, lastBossHp=-1, banishMode=false;
 
 function btn(label,action,classes='',disabled=false) {
   return '<button type="button" class="'+classes+'" data-do="'+action+'"'+(disabled?' disabled':'')+'>'+label+'</button>';
@@ -38,6 +39,7 @@ function screen(title,content,tag='h2') { panel.innerHTML='<'+tag+'>'+title+'</'
 function actions(content) { return '<div class="actions">'+content+'</div>'; }
 
 const metaUi={btn,card,screen,actions};
+initHomeArt();
 const quick=document.querySelector('#quick-emotes');
 const countdowns=Array.from({length:11},(_,i)=>String(i)+' s');
 let lastCountdown=-1, replaying=false;
@@ -60,9 +62,9 @@ function showLobby() {
 }
 addEventListener('cendres:coop-cards',()=>{ if(run.mode==='level'||run.mode==='chest') syncUi(true); });
 bindCombat(panel,()=>{ if(page==='combat'||run.mode==='won'||run.mode==='lost') syncUi(true); },showLobby);
-bindCosmetics(panel,()=>{ if(run.mode==='menu'&&page==='cosmetics') syncUi(true); },selectedCharacter);
+bindCosmetics(panel,()=>{ if(run.mode==='menu'&&(page==='cosmetics'||page==='home')) syncUi(true); },selectedCharacter);
 bindMetaVolumes(panel);
-bindSocial(panel,()=>{ if(run.mode==='menu' && page==='friends') syncUi(true); },()=>{
+bindSocial(panel,()=>{ if(run.mode==='menu' && (page==='friends'||page==='home')) syncUi(true); },()=>{
   page='friends'; if(run.mode==='menu') syncUi(true);
 });
 bindProfile(panel,()=>{ if(run.mode==='menu' && (page==='profile' || page==='home')) syncUi(true); });
@@ -70,7 +72,8 @@ bindProfile(panel,()=>{ if(run.mode==='menu' && (page==='profile' || page==='hom
 function drawMenu() {
   if(menu.dataset) menu.dataset.metaPage=run.mode==='menu' ? page : '';
   if(run.mode==='menu') {
-    if(page==='profile') drawProfile(metaUi);
+    if(page==='home') drawHome(panel);
+    else if(page==='profile') drawProfile(metaUi);
     else if(page==='friends') drawSocial(metaUi);
     else if(page==='cosmetics') drawCosmetics(metaUi,selectedCharacter());
     else if(page==='combat') drawCombat(metaUi);
@@ -163,6 +166,7 @@ panel.addEventListener('click',event=>{
   const action=target.dataset.do;
   if(action==='accountRetry') retryProfile();
   else if(action.startsWith('m:')) {
+    unlock();
     page=handleMeta(action,page);
     if(page==='combat' && action==='m:page:combat') openCombatHistory();
     if(page==='cosmetics' && action==='m:page:cosmetics') cosmeticsState();
