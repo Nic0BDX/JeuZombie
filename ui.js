@@ -1,12 +1,12 @@
 import { run, start, background, choose, reroll, skip, dismissChest } from './game.js';
 import { player, passiveLevels } from './player.js';
-import { levels, evolved } from './weapons.js';
+import { levels, evolved, hasSynergy } from './weapons.js';
 import { mobs } from './enemies.js';
 import { choices, offset } from './passives.js';
 import { save, persist } from './save.js';
 import { unlock } from './audio.js';
 import { characters, weaponCosts } from './data/characters.js';
-import { weapons } from './data/weapons.js';
+import { weapons, slots, synergyDescription } from './data/weapons.js';
 import { passives, shop, shopCap, shopCost } from './data/passives.js';
 import { enemies } from './data/enemies.js';
 
@@ -50,7 +50,7 @@ function drawMenu() {
       }
       for(let i=0;i<weaponCosts.length;i++) if(weaponCosts[i]) {
         const owned=save.weapons & (1<<i);
-        list+=card(weapons[i].name,owned ? 'Débloquée' : weaponCosts[i]+' or',weapons[i].icon,'weapon'+i,!!owned || save.gold<weaponCosts[i]);
+        list+=card(weapons[i].nom,owned ? 'Débloquée' : weaponCosts[i]+' or',weapons[i].icon,'weapon'+i,!!owned || save.gold<weaponCosts[i]);
       }
       screen('Boutique · '+save.gold+' or',actions(list+back()));
     }
@@ -64,7 +64,7 @@ function drawMenu() {
       if(id<0) continue;
       if(id<offset) {
         const w=weapons[id];
-        list+=card(w.name,w.description+' · niv. '+(levels[id]+1),w.icon,'choose'+i);
+        list+=card(w.nom,w.description+(hasSynergy(id,true) ? ' · '+synergyDescription : '')+' · niv. '+(levels[id]+1),w.icon,'choose'+i);
       } else {
         const p=passives[id-offset];
         list+=card(p[0],p[1]+' · niv. '+(passiveLevels[id-offset]+1),'◆','choose'+i);
@@ -76,7 +76,7 @@ function drawMenu() {
       btn('Passer · '+run.skips,'skip','',!run.skips)+'</div>');
   } else if(run.mode==='chest') {
     const id=run.reward;
-    const label=id<0 ? '12 or' : id>=offset ? weapons[id-offset].evolution : weapons[id].name+' · niv. '+levels[id];
+    const label=id<0 ? '12 or' : id>=offset ? weapons[id-offset].evolution.nomEvolue : weapons[id].nom+' · niv. '+levels[id];
     screen('Coffre', '<div class="chest" aria-hidden="true">⬙</div><p>'+label+'</p>'+actions(btn('Continuer','chest','primary')));
   } else screen(run.mode==='won'?'Victoire':'Défaite','<p>Temps '+times[Math.min(3600,Math.floor(run.elapsed))]+' · '+run.kills+' éliminations</p><p>'+run.gold+' or · Niveau '+run.level+'</p>'+
     actions(btn('Rejouer','play','primary')+btn('Menu','exit')));

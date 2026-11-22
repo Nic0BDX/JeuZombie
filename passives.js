@@ -1,5 +1,5 @@
 import { passiveLevels, recalc } from './player.js';
-import { levels, evolved } from './weapons.js';
+import { levels, evolved, refreshWeapons } from './weapons.js';
 import { save } from './save.js';
 import { weapons, weaponMax, slots } from './data/weapons.js';
 import { passives, passiveMax } from './data/passives.js';
@@ -26,13 +26,14 @@ export function upgrade(id) {
   if(id<0) return;
   if(id<offset) levels[id]++;
   else { passiveLevels[id-offset]++; recalc(); }
+  refreshWeapons();
 }
 
 export function reward() {
-  for(let i=0;i<levels.length;i++) if(levels[i]===weaponMax && !evolved[i] && passiveLevels[weapons[i].passive]) {
-    evolved[i]=1;
+  for(let i=0;i<levels.length;i++) if(levels[i]===weaponMax && !evolved[i] && passiveLevels[weapons[i].evolution.passifRequis]) {
+    evolved[i]=1; refreshWeapons();
     return i+offset;
   }
-  for(let i=0;i<levels.length;i++) if(levels[i] && levels[i]<weaponMax) { levels[i]++; return i; }
+  for(let i=0;i<levels.length;i++) if(levels[i] && levels[i]<weaponMax) { levels[i]++; refreshWeapons(); return i; }
   return -1;
 }

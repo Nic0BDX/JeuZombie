@@ -1,13 +1,13 @@
 import { player, updatePlayer, resetPlayer, stats, passiveLevels } from './player.js';
 import { readInput, movement, stick } from './input.js';
-import { getSprite, tiles, tileHash, creatures, buildCreatures } from './sprites.js';
+import { getSprite, tiles, tileHash, creatures, buildCreatures, ghostHound } from './sprites.js';
 
 import { enemies, invulnerability } from './data/enemies.js';
 import { caps, xpStart } from './data/waves.js';
 import { characters } from './data/characters.js';
 import { weapons } from './data/weapons.js';
 import { mobs, updateEnemies } from './enemies.js';
-import { shots, levels, evolved, enemyShot, resetWeapons, updateWeapons } from './weapons.js';
+import { shots, levels, evolved, enemyShot, resetWeapons, updateWeapons, refreshWeapons } from './weapons.js';
 import { loot, drop, attract, updateLoot } from './pickups.js';
 import { resetWaves, updateWaves } from './waves.js';
 import { offer, upgrade, reward } from './passives.js';
@@ -17,6 +17,7 @@ import { save, persist } from './save.js';
 export const run={ mode:'menu', elapsed:0, xp:0, goal:xpStart, level:1, kills:0, gold:0, paid:0, rerolls:2, skips:2, chests:0, reward:-1, boss:-1 };
 const effects=Array.from({length:caps.effects},()=>({life:0,x:0,y:0,vx:0,vy:0,label:'',color:''}));
 const numbers=Array.from({length:1000},(_,i)=>String(i));
+const chainLinks=[3,3], noDash=[];
 const gems=['#69b9ff','#97defe','#a8a4ff','#f67676','#83efd3','#f69467','#f9d676','#f2ba83'];
 let shake=0, cursor=0, impact=0, bossSpawned=false;
 buildCreatures(enemies);
@@ -37,7 +38,7 @@ export function start(character) {
   run.level=1; run.goal=xpStart; run.rerolls=run.skips=2; run.reward=run.boss=-1;
   bossSpawned=false; impact=shake=cursor=0;
   resetPlayer(character);
-  resetWeapons(characters[character].weapon); resetWaves();
+  resetWeapons(characters[character].weapon); refreshWeapons(); resetWaves();
   for(let i=0;i<mobs.length;i++) mobs[i].active=false;
   for(let i=0;i<loot.length;i++) loot[i].active=false;
   for(let i=0;i<effects.length;i++) effects[i].life=0;
@@ -63,9 +64,9 @@ function particle(x,y,vx,vy,life,label,color) {
   p.x=x; p.y=y; p.vx=vx; p.vy=vy; p.life=life; p.label=label; p.color=color;
 }
 
-function hit(m,damage,strong) {
+function hit(m,damage,critical) {
   m.hp-=damage; m.flash=.1;
-  if(save.options.quality) particle(m.x,m.y-8,0,-24,.5,numbers[Math.min(999,Math.round(damage))],strong ? '#ffe98e' : '#fff3d1');
+  if(save.options.quality) particle(m.x,m.y-8,0,-24,.5,numbers[Math.min(999,Math.round(damage))],critical ? '#ffe98e' : '#fff3d1');
   if(impact<=0) { sound(1); impact=.075; }
   if(m.hp>0) return;
   m.active=false; run.kills++;
@@ -150,7 +151,7 @@ export function update(dt) {
   updatePlayer(dt,movement.x,movement.y);
   if(updateWaves(dt,run.elapsed,scene.width,scene.height)) { sound(7); shake=.3; if(run.elapsed>=900) bossSpawned=true; }
   const minute=Math.min(14,Math.floor(run.elapsed/60));
-  updateEnemies(dt,minute,hurt,enemyShot);
+  updateEnemies(dt,minute,hurt,enemyShot,hit);
   updateWeapons(dt,scene.width,scene.height,hit,hurt);
   updateLoot(dt,collect);
   run.boss=-1;
@@ -240,36 +241,60 @@ function renderEntities(left,top) {
     art.setTransform(m.facing,0,0,1,x,y);
     art.drawImage(sprite,-size/2,-size/2,size,size);
     art.resetTransform();
+    if(!reduced && save.options.quality) {
+      if(m.burn>0) { art.fillStyle='#ff9e55'; art.fillRect(x-5,y-9,2,3); }
+      if(m.poison>0) { art.fillStyle='#aadc73'; art.fillRect(x+4,y-7,2,2); }
+      if(m.stun>0) { art.fillStyle='#c8e7ff'; art.fillRect(x-1,y-13,3,2); }
+      if(m.slow>0) { art.fillStyle='#c6b2db'; art.fillRect(x-3,y+7,6,1); }
+    }
   }
   for(let i=0;i<shots.length;i++) {
     const s=shots[i];
     if(s.life<=0) continue;
     const x=Math.round(s.x)-left,y=Math.round(s.y)-top;
     if(!visible(x,y,s.area+8)) continue;
-    const color=s.kind<0 ? '#f28eaa' : weapons[s.kind].color;
+    const weapon=weapons[s.kind];
+    const visual=weapon?.effetVisuel;
+    const color=weapon?.color ?? '#f28eaa';
     art.strokeStyle=art.fillStyle=color;
     art.lineWidth=s.strong ? 3 : 1;
     art.globalAlpha=s.wait>0 ? .9 : Math.min(1,s.life*8);
     art.beginPath();
-    if(s.kind===0) {
+    if(visual==='arc') {
       const a=s.vx<0 ? Math.PI : 0;
       art.arc(x,y,s.area,a-1.23,a+1.23);
       art.stroke();
-    } else if(s.kind===4 || (s.kind===3 && s.wait<=0)) {
+    } else if(visual==='circle' || visual==='chains' || (visual==='lob' && s.wait<=0) || (visual==='mine' && s.phase)) {
       art.arc(x,y,s.area,0,Math.PI*2); art.stroke();
-      art.globalAlpha*=.14; art.fill();
-    } else if(s.kind===5) {
+      art.globalAlpha*=s.strong ? .28 : .14; art.fill();
+      if(visual==='chains') {
+        art.globalAlpha=1;
+        art.setLineDash(chainLinks);
+        art.beginPath();
+        art.moveTo(x-s.area,y); art.lineTo(x+s.area,y);
+        art.moveTo(x,y-s.area); art.lineTo(x,y+s.area);
+        art.stroke();
+        art.setLineDash(noDash);
+      }
+    } else if(visual==='lightning') {
       art.moveTo(x+6,y-38); art.lineTo(x-4,y-20); art.lineTo(x+5,y-20); art.lineTo(x,y); art.stroke();
       art.fillRect(x-4,y-2,8,4);
-    } else if(s.kind===3) {
+    } else if(visual==='lob') {
       const lift=Math.round(Math.sin(Math.max(0,s.wait)/.55*Math.PI)*38);
       art.fillRect(x-2,y-lift-2,5,5);
-    } else if(s.kind===2 || s.kind===6) {
+    } else if(visual==='mine') {
+      art.fillRect(x-4,y-2,8,4); art.fillRect(x-2,y-4,4,8);
+    } else if(visual==='hound') {
+      const facing=s.vx<0 ? -1 : 1;
+      art.setTransform(facing,0,0,1,x,y);
+      art.drawImage(ghostHound,-8,-5);
+      art.resetTransform();
+    } else if(visual==='diamond') {
       const r=s.strong ? 6 : 4;
       art.moveTo(x-r,y); art.lineTo(x,y-r); art.lineTo(x+r,y); art.lineTo(x,y+r); art.closePath(); art.fill();
     } else {
       art.moveTo(x,y); art.lineTo(x-s.vx*.056,y-s.vy*.056);
-      art.lineWidth=s.strong ? 4 : s.kind===7 ? 3 : 2; art.stroke();
+      art.lineWidth=s.strong ? 4 : s.kind>=0 ? 3 : 2; art.stroke();
     }
     art.globalAlpha=1;
   }

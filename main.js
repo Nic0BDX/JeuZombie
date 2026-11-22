@@ -45,7 +45,7 @@ function frame(now) {
   if (elapsed < 1000) return;
   const refresh = samples * 1000 / elapsed;
   slow = refresh < (slow ? 56 : 50);
-  reduceEffects(slow);
+  reduceEffects(refresh < 45 || draws * 1000 / elapsed < 45 && !slow);
   fps.value = Math.round(draws * 1000 / elapsed) + ' FPS';
   report = now;
   samples = draws = 0;

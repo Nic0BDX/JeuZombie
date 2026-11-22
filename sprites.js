@@ -95,3 +95,14 @@ export function buildCreatures(enemies) {
     creatures.push(frames);
   }
 }
+
+const hound=surface(16);
+hound.fillStyle='#577984';
+hound.fillRect(3,7,10,5); hound.fillRect(11,5,4,5);
+hound.fillStyle='#a4cfdc';
+hound.fillRect(1,5,3,2); hound.fillRect(4,8,8,2);
+hound.fillRect(11,4,1,3); hound.fillRect(13,3,1,4);
+hound.fillRect(4,11,2,2); hound.fillRect(10,11,2,2);
+hound.fillStyle='#e2fbf9';
+hound.fillRect(13,7,1,1);
+export const ghostHound=hound.canvas;

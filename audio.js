@@ -3,7 +3,7 @@ import { save } from './save.js';
 let context, bus;
 const voices = [
  [190,.1,'square'],[110,.09,'triangle'],[72,.14,'triangle'],[560,.08,'sine'],
- [520,.33,'triangle'],[310,.36,'sine'],[83,.21,'sawtooth'],[52,.5,'triangle']
+ [520,.33,'triangle'],[310,.36,'sine'],[83,.21,'sawtooth'],[52,.5,'triangle'],[245,.20,'sawtooth']
 ];
 let last=-1, pending=0;
 
@@ -11,7 +11,7 @@ export function sound(id) { pending|=1<<id; }
 setInterval(()=>{
   const mask=pending;
   pending=0;
-  if(!document.hidden) for(let id=7;id>=0;id--) if(mask & (1<<id)) playVoice(id);
+  if(!document.hidden) for(let id=voices.length-1;id>=0;id--) if(mask & (1<<id)) playVoice(id);
 },32);
 
 export async function unlock() {
