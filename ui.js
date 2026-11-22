@@ -1,4 +1,5 @@
 import { selectedCharacter, selectedWeapon, seeWeapon } from './meta.js';
+import { drawProfile, bindProfile, retryProfile } from './profile-ui.js';
 import { bindMetaVolumes, drawMeta, drawRunResult, handleMeta } from './meta-ui.js';
 import { run, start, background, choose, reroll, skip, banishCard, dismissChest } from './game.js';
 import { player, passiveLevels } from './player.js';
@@ -32,11 +33,13 @@ function actions(content) { return '<div class="actions">'+content+'</div>'; }
 
 const metaUi={btn,card,screen,actions};
 bindMetaVolumes(panel);
+bindProfile(panel,()=>{ if(run.mode==='menu' && (page==='profile' || page==='home')) syncUi(true); });
 
 function drawMenu() {
   if(menu.dataset) menu.dataset.metaPage=run.mode==='menu' ? page : '';
   if(run.mode==='menu') {
-    if(!drawMeta(page,metaUi)) screen('Les Cendres du Marais',actions(btn('Touche pour jouer','home','primary')),'h1');
+    if(page==='profile') drawProfile(metaUi);
+    else if(!drawMeta(page,metaUi)) screen('Les Cendres du Marais',actions(btn('Touche pour jouer','home','primary')),'h1');
   } else if(run.mode==='pause') {
     if(page==='pauseOptions') drawMeta(page,metaUi);
     else screen('Pause',actions(btn('Reprendre','resume','primary')+btn('Options','pauseOptions')+btn('Quitter la partie','exit')));
@@ -116,7 +119,8 @@ panel.addEventListener('click',event=>{
   const target=event.target.closest('button[data-do]');
   if(!target || target.disabled) return;
   const action=target.dataset.do;
-  if(action.startsWith('m:')) page=handleMeta(action,page);
+  if(action==='accountRetry') retryProfile();
+  else if(action.startsWith('m:')) page=handleMeta(action,page);
   else if(action==='play') {
     unlock();
     if(matchMedia('(display-mode: fullscreen)').matches || navigator.standalone) {

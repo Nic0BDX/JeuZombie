@@ -24,6 +24,15 @@ function normalize(source) {
 
 const previous=read(key)??read(legacyKey);
 export let save=previous && typeof previous==='object' ? normalize(previous) : defaults();
-export function persist(){ try { localStorage.setItem(key,JSON.stringify(save)); } catch {} }
-export function resetSave(){ save=defaults(); persist(); }
+export function persist(notify=true){
+  try { localStorage.setItem(key,JSON.stringify(save)); } catch {}
+  if(notify) globalThis.dispatchEvent?.(new Event('cendres:save'));
+}
+export function prepareCloudSave(source){ return normalize(source); }
+export function applyCloudSave(source){ save=prepareCloudSave(source); persist(false); }
+export function resetSave(){
+  globalThis.dispatchEvent?.(new Event('cendres:reset'));
+  save=defaults();
+  persist();
+}
 if(previous && previous.version!==2) persist();

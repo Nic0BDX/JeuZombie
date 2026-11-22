@@ -1,6 +1,7 @@
 import { bindInput } from './input.js';
 import { resize, update, render, background, reduceEffects, run } from './game.js';
 
+import { startAccounts } from './online.js';
 import { syncUi } from './ui.js';
 
 const canvas = document.querySelector('canvas');
@@ -13,6 +14,7 @@ function fit() { resize(canvas); dirty=true; }
 fit();
 bindInput(canvas);
 syncUi();
+startAccounts();
 addEventListener('resize', fit);
 window.visualViewport?.addEventListener('resize', fit);
 document.addEventListener('visibilitychange', () => {

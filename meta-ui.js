@@ -116,7 +116,7 @@ export function drawMeta(page,ui){
   const {screen,actions,btn}=ui;
   if(page==='home'){
     screen('Les Cendres du Marais','<p>'+save.gold+' or</p>'+actions(btn('Jouer','m:page:prepare','primary')+
-      btn('Personnages','m:page:characters')+btn('Boutique','m:page:shop')+btn('Collection','m:page:collection')+btn('Options','m:page:options')),'h1');
+      btn('Personnages','m:page:characters')+btn('Boutique','m:page:shop')+btn('Collection','m:page:collection')+btn('Profil','m:page:profile')+btn('Options','m:page:options')),'h1');
   } else if(page==='characters'||page==='prepareCharacters'){
     screen('Personnages',actions(charactersList(ui,true)+btn('Retour','m:page:'+(page==='characters'?'home':'prepare'))));
   } else if(page==='prepare') drawPreparation(ui);
@@ -125,7 +125,7 @@ export function drawMeta(page,ui){
   else if(page==='options'||page==='pauseOptions') options(page==='options'?'home':'pauseMenu',ui);
   else if(page==='refund') screen('Rembourser les améliorations ?',actions(btn('Récupérer '+refundValue()+' or','m:refund','primary')+btn('Annuler','m:page:shop')));
   else if(page==='reset') screen('Effacer la sauvegarde ?',actions(btn('Continuer vers la confirmation','m:page:resetConfirm')+btn('Annuler','m:page:options')));
-  else if(page==='resetConfirm') screen('Effacement définitif','<p>Or, déblocages et records seront effacés.</p>'+actions(btn('Tout effacer','m:reset')+btn('Annuler','m:page:options','primary')));
+  else if(page==='resetConfirm') screen('Effacement définitif','<p>La progression de ce téléphone sera effacée. Un compte sécurisé reste récupérable par e-mail.</p>'+actions(btn('Effacer sur ce téléphone','m:reset')+btn('Annuler','m:page:options','primary')));
   else return false;
   return true;
 }
