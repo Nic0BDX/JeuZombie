@@ -1,6 +1,6 @@
 # Progression
-- Amélioration P1 (S1) : 12 armes pilotées par données, critiques, statuts cumulables, évolutions, synergie Feu et six emplacements HUD.
-- Fichiers clés : data/weapons.js, weapons.js, enemies.js, game.js, passives.js, ui.js.
-- Les quatre nouvelles armes sont disponibles dans les tirages. Les déblocages, l’or et les options existants sont conservés.
-- Les évolutions utilisent les passifs actuels. Le nouveau système de cartes et de passifs est prévu en P2.
-- Le boss final apparaît à 15:00. Tactile et performances restent à tester sur téléphone.
+- Amélioration P2 livrée avec P1 : 12 armes, XP graduée, tirage pondéré, 16 passifs, relances et bannissements.
+- Fichiers clés : data/cards.js, data/passives.js, passives.js, pickups.js, game.js, ui.js.
+- La croissance multiplie le seuil d’XP et agit au carré sur les gains, ce qui conserve un bénéfice net.
+- Les trois outils de tirage sont disponibles par partie. Les passifs actuels servent aux évolutions.
+- Reste : audio adaptatif, boutique et collection, validation tactile sur téléphone.

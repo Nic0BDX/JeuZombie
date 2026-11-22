@@ -3,22 +3,23 @@ import { readInput, movement, stick } from './input.js';
 import { getSprite, tiles, tileHash, creatures, buildCreatures, ghostHound } from './sprites.js';
 
 import { enemies, invulnerability } from './data/enemies.js';
-import { caps, xpStart } from './data/waves.js';
+import { caps } from './data/waves.js';
 import { characters } from './data/characters.js';
+import { xpGoal, gemTier, utilityCards, chestGold, cardTools } from './data/cards.js';
 import { weapons } from './data/weapons.js';
 import { mobs, updateEnemies } from './enemies.js';
 import { shots, levels, evolved, enemyShot, resetWeapons, updateWeapons, refreshWeapons } from './weapons.js';
-import { loot, drop, attract, updateLoot } from './pickups.js';
+import { loot, drop, attract, resetLoot, updateLoot } from './pickups.js';
 import { resetWaves, updateWaves } from './waves.js';
-import { offer, upgrade, reward } from './passives.js';
+import { offer, upgrade, reward, banish, resetCards, utilityOffset } from './passives.js';
 import { sound, vibrate } from './audio.js';
 import { save, persist } from './save.js';
 
-export const run={ mode:'menu', elapsed:0, xp:0, goal:xpStart, level:1, kills:0, gold:0, paid:0, rerolls:2, skips:2, chests:0, reward:-1, boss:-1 };
+export const run={ mode:'menu', elapsed:0, xp:0, goal:xpGoal(1,1), level:1, kills:0, gold:0, paid:0, rerolls:cardTools.rerolls, skips:cardTools.skips, banishes:cardTools.banishes, chests:0, reward:-1, boss:-1 };
 const effects=Array.from({length:caps.effects},()=>({life:0,x:0,y:0,vx:0,vy:0,label:'',color:''}));
 const numbers=Array.from({length:1000},(_,i)=>String(i));
 const chainLinks=[3,3], noDash=[];
-const gems=['#69b9ff','#97defe','#a8a4ff','#f67676','#83efd3','#f69467','#f9d676','#f2ba83'];
+const gems=['#69b9ff','#97defe','#a8a4ff','#b4f4ff','#f67676','#83efd3','#f69467','#f9d676','#f2ba83'];
 let shake=0, cursor=0, impact=0, bossSpawned=false;
 buildCreatures(enemies);
 
@@ -35,12 +36,16 @@ export function background() {
 
 export function start(character) {
   run.mode='playing'; run.elapsed=run.xp=run.kills=run.gold=run.paid=run.chests=0;
-  run.level=1; run.goal=xpStart; run.rerolls=run.skips=2; run.reward=run.boss=-1;
+  run.level=1; run.reward=run.boss=-1;
   bossSpawned=false; impact=shake=cursor=0;
   resetPlayer(character);
+  run.goal=xpGoal(1,stats.growth);
+  run.rerolls=cardTools.rerolls+stats.rerolls;
+  run.skips=cardTools.skips; run.banishes=cardTools.banishes+stats.banishes;
+  resetCards();
   resetWeapons(characters[character].weapon); refreshWeapons(); resetWaves();
   for(let i=0;i<mobs.length;i++) mobs[i].active=false;
-  for(let i=0;i<loot.length;i++) loot[i].active=false;
+  resetLoot();
   for(let i=0;i<effects.length;i++) effects[i].life=0;
 }
 
@@ -51,7 +56,19 @@ function finish(mode) {
 
 export function choose(id) {
   if(run.mode!=='level') return;
-  upgrade(id);
+  if(id>=utilityOffset) {
+    const card=utilityCards[id-utilityOffset];
+    if(!card) return;
+    player.hp=Math.min(stats.health,player.hp+stats.health*card[2]);
+    if(card[3]) addGold(card[3]);
+  } else {
+    const growth=stats.growth;
+    upgrade(id);
+    if(stats.growth!==growth) {
+      run.xp*=stats.growth/growth;
+      run.goal=xpGoal(run.level,stats.growth);
+    }
+  }
   run.mode='playing';
   interrupt();
 }
@@ -59,12 +76,21 @@ export function choose(id) {
 export function reroll() { if(run.mode==='level' && run.rerolls>0) { run.rerolls--; offer(); } }
 export function skip() { if(run.mode==='level' && run.skips>0) { run.skips--; choose(-1); } }
 
+export function banishCard(id) {
+  if(run.mode!=='level' || !run.banishes || !banish(id)) return false;
+  run.banishes--;
+  return true;
+}
+
+function addGold(value) { run.gold+=Math.round(value*stats.goldGain); }
+
 function particle(x,y,vx,vy,life,label,color) {
   const p=effects[cursor++ % effects.length];
   p.x=x; p.y=y; p.vx=vx; p.vy=vy; p.life=life; p.label=label; p.color=color;
 }
 
 function hit(m,damage,critical) {
+  if(stats.lifeSteal) player.hp=Math.min(stats.health,player.hp+Math.min(m.hp,damage)*stats.lifeSteal);
   m.hp-=damage; m.flash=.1;
   if(save.options.quality) particle(m.x,m.y-8,0,-24,.5,numbers[Math.min(999,Math.round(damage))],critical ? '#ffe98e' : '#fff3d1');
   if(impact<=0) { sound(1); impact=.075; }
@@ -88,13 +114,14 @@ function hit(m,damage,critical) {
 
 function hurt(damage) {
   if(player.inv>0 || player.hp<=0) return;
+  if(stats.dodge>0 && Math.random()<stats.dodge) { player.inv=.18; return; }
   player.hp=Math.max(0,player.hp-Math.max(1,damage-stats.armor));
   player.inv=invulnerability;
   shake=.17; sound(6); vibrate(20);
 }
 
 function collect(kind,value) {
-  if(kind===0) { run.xp+=value*stats.growth; sound(3); }
+  if(kind===0) { run.xp+=value*stats.growth*stats.growth; sound(3); }
   else if(kind===1) player.hp=Math.min(stats.health,player.hp+30);
   else if(kind===2) attract();
   else if(kind===3) {
@@ -103,16 +130,16 @@ function collect(kind,value) {
       if(m.active && Math.abs(m.x-player.x)<scene.width/2 && Math.abs(m.y-player.y)<scene.height/2) hit(m,m.hp,true);
     }
     shake=.28;
-  } else if(kind===4) run.gold+=value;
+  } else if(kind===4) addGold(value);
   else run.chests++;
 }
 
 function interrupt() {
   if(run.chests) {
-    run.chests--; run.reward=reward(); run.gold+=12;
+    run.chests--; run.reward=reward(); addGold(chestGold);
     sound(5); vibrate(45); run.mode='chest';
   } else if(run.xp>=run.goal) {
-    run.xp-=run.goal; run.level++; run.goal=Math.floor(run.goal*1.14+3);
+    run.xp-=run.goal; run.level++; run.goal=xpGoal(run.level,stats.growth);
     offer(); sound(4); vibrate(35); run.mode='level';
   }
 }
@@ -220,8 +247,8 @@ function renderEntities(left,top) {
     if(!p.active) continue;
     const x=Math.round(p.x)-left,y=Math.round(p.y)-top;
     if(!visible(x,y,10)) continue;
-    const size=p.kind===0 ? (p.value>=8 ? 4 : p.value>=3 ? 3 : 2) : p.kind===5 ? 6 : 4;
-    art.fillStyle=gems[p.kind===0 ? size-2 : p.kind+2];
+    const size=p.kind===0 ? 2+gemTier(p.value) : p.kind===5 ? 6 : 4;
+    art.fillStyle=gems[p.kind===0 ? size-2 : p.kind+3];
     if(p.kind===5) {
       art.fillRect(x-6,y-4,12,8); art.fillStyle='#472d3d'; art.fillRect(x-6,y-1,12,2);
       art.fillStyle='#fff2c2'; art.fillRect(x-1,y-2,2,4);

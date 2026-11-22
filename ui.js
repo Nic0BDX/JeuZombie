@@ -1,14 +1,15 @@
-import { run, start, background, choose, reroll, skip, dismissChest } from './game.js';
+import { run, start, background, choose, reroll, skip, banishCard, dismissChest } from './game.js';
 import { player, passiveLevels } from './player.js';
-import { levels, evolved, hasSynergy } from './weapons.js';
+import { levels, evolved } from './weapons.js';
 import { mobs } from './enemies.js';
-import { choices, offset } from './passives.js';
+import { choices, rarities, offset, utilityOffset, cardInfo } from './passives.js';
 import { save, persist } from './save.js';
 import { unlock } from './audio.js';
 import { characters, weaponCosts } from './data/characters.js';
-import { weapons, slots, synergyDescription } from './data/weapons.js';
+import { weapons, slots } from './data/weapons.js';
 import { passives, shop, shopCap, shopCost } from './data/passives.js';
 import { enemies } from './data/enemies.js';
+import { cardRarities } from './data/cards.js';
 
 const menu=document.querySelector('#menu'), panel=document.querySelector('#panel'), hud=document.querySelector('#hud');
 const bar=document.querySelector('#experience'), clock=document.querySelector('#clock'), level=document.querySelector('#level');
@@ -16,7 +17,7 @@ const boss=document.querySelector('#boss'), bossName=boss.querySelector('span'),
 const kit=document.querySelector('#kit'), pause=document.querySelector('#pause');
 const digits=Array.from({length:60},(_,i)=>String(i).padStart(2,'0'));
 const times=Array.from({length:3601},(_,i)=>digits[Math.floor(i/60)%60]+':'+digits[i%60]);
-let previous='', page='welcome', selected=0, lastSecond=-1, lastLevel=0, lastXp=-1, lastBoss=-2;
+let previous='', page='welcome', selected=0, lastSecond=-1, lastLevel=0, lastXp=-1, lastBoss=-2, banishMode=false;
 
 function btn(label,action,classes='',disabled=false) {
   return '<button type="button" class="'+classes+'" data-do="'+action+'"'+(disabled?' disabled':'')+'>'+label+'</button>';
@@ -62,18 +63,15 @@ function drawMenu() {
     for(let i=0;i<choices.length;i++) {
       const id=choices[i];
       if(id<0) continue;
-      if(id<offset) {
-        const w=weapons[id];
-        list+=card(w.nom,w.description+(hasSynergy(id,true) ? ' · '+synergyDescription : '')+' · niv. '+(levels[id]+1),w.icon,'choose'+i);
-      } else {
-        const p=passives[id-offset];
-        list+=card(p[0],p[1]+' · niv. '+(passiveLevels[id-offset]+1),'◆','choose'+i);
-      }
+      const c=cardInfo(id), rarity=cardRarities[rarities[i]];
+      list+='<button type="button" class="card upgrade" data-do="choose'+i+'" style="--rarity:'+rarity[1]+'"'+
+        (banishMode && id>=utilityOffset?' disabled':'')+'><b>'+c.icon+'</b><span><em>'+rarity[0]+' · '+c.tag+
+        '</em><strong>'+c.name+(c.rank?' <span class="card-rank">'+c.rank+'</span>':'')+'</strong><small>'+c.desc+'</small></span></button>';
     }
-    if(!list) list=btn('Continuer','continue','primary');
-    screen('Niveau '+run.level,actions(list)+'<div class="split">'+
-      btn('Relancer · '+run.rerolls,'reroll','',!run.rerolls || !choices.some(id=>id>=0))+
-      btn('Passer · '+run.skips,'skip','',!run.skips)+'</div>');
+    screen('Niveau '+run.level,(banishMode?'<p>Choisis une carte à bannir.</p>':'')+actions(list)+'<div class="split card-tools">'+
+      btn('Relancer · '+run.rerolls,'reroll','',!run.rerolls || banishMode)+
+      btn('Passer · '+run.skips,'skip','',!run.skips || banishMode)+
+      btn(banishMode?'Annuler':'Bannir · '+run.banishes,'banish','',!run.banishes || !choices.some(id=>id>=0&&id<utilityOffset))+'</div>');
   } else if(run.mode==='chest') {
     const id=run.reward;
     const label=id<0 ? '12 or' : id>=offset ? weapons[id-offset].evolution.nomEvolue : weapons[id].nom+' · niv. '+levels[id];
@@ -106,6 +104,7 @@ function drawKit() {
 export function syncUi(force=false) {
   if(force || previous!==run.mode) {
     previous=run.mode;
+    if(run.mode!=='level') banishMode=false;
     hud.hidden=run.mode==='menu';
     menu.hidden=run.mode==='playing';
     if(!menu.hidden) drawMenu();
@@ -114,8 +113,13 @@ export function syncUi(force=false) {
   if(hud.hidden) return;
   const second=Math.min(3600,Math.floor(run.elapsed));
   if(second!==lastSecond) { lastSecond=second; clock.textContent=times[second]; }
-  if(run.level!==lastLevel) { lastLevel=run.level; level.textContent='NV '+run.level; }
-  const xp=Math.floor(run.xp/run.goal*100);
+  if(run.level!==lastLevel) {
+    if(run.level>lastLevel && lastLevel>0 && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      bar.parentElement?.animate?.([{backgroundColor:'#d3f5ff'},{backgroundColor:'#161c27'}],420);
+    }
+    lastLevel=run.level; level.textContent='NV '+run.level;
+  }
+  const xp=Math.min(100,Math.floor(run.xp/run.goal*100));
   if(lastXp!==xp) { lastXp=xp; bar.style.width=xp+'%'; }
   if(run.boss!==lastBoss) {
     lastBoss=run.boss; boss.hidden=run.boss<0;
@@ -147,7 +151,13 @@ panel.addEventListener('click',event=>{
   else if(action==='continue') choose(-1);
   else if(action==='reroll') reroll();
   else if(action==='skip') skip();
-  else if(action.startsWith('choose')) choose(choices[Number(action.slice(6))]);
+  else if(action==='banish') banishMode=!banishMode;
+  else if(action.startsWith('choose')) {
+    const id=choices[Number(action.slice(6))];
+    if(banishMode) {
+      if(banishCard(id)) banishMode=false;
+    } else choose(id);
+  }
   else if(/^character\d+$/.test(action)) {
     const i=Number(action.slice(9));
     if(!(save.characters & (1<<i))) {

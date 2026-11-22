@@ -1,7 +1,7 @@
-const cacheName='cendres-v2';
+const cacheName='cendres-v3';
 const files=['./','./index.html','./icon.svg','./icon-192.png','./icon-512.png','./manifest.webmanifest','./main.js','./game.js','./input.js','./player.js',
  './enemies.js','./weapons.js','./passives.js','./pickups.js','./waves.js','./ui.js','./audio.js','./sprites.js','./save.js',
- './data/characters.js','./data/enemies.js','./data/weapons.js','./data/passives.js','./data/waves.js'];
+ './data/characters.js','./data/enemies.js','./data/weapons.js','./data/cards.js','./data/passives.js','./data/waves.js'];
 self.addEventListener('install', event=>{
   event.waitUntil(caches.open(cacheName).then(cache=>cache.addAll(files)).then(()=>self.skipWaiting()));
 });

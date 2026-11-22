@@ -44,6 +44,13 @@ p{margin:5px 0 12px}
 .primary{background:#3a5349;border-color:#83aa8d}
 .card{display:grid;grid-template-columns:36px 1fr;align-items:center;text-align:left;min-height:60px}
 .card b:first-child{font-size:23px;color:#badfc3}
+#experience{transition:width .18s ease-out}
+.upgrade{border-color:var(--rarity);min-height:68px}
+.upgrade em{display:block;font:700 12px monospace;color:var(--rarity)}
+.upgrade b{width:27px;line-height:26px;background:#212a34;text-align:center}
+.upgrade .card-rank{color:var(--rarity);white-space:nowrap;font-size:.86rem}
+.card-tools button:last-child{grid-column:1/-1}
+@media(prefers-reduced-motion:reduce){#experience{transition:none}}
 .card small{display:block;font-size:14px;color:#ddd4d5}
 .chest{font-size:46px;color:#ffd98d;animation:open .45s ease-out}
 @keyframes open{0%{transform:scale(.2) rotate(-15deg);opacity:.2}70%{transform:scale(1.18)}}

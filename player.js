@@ -17,7 +17,6 @@ export function recalc() {
     const level = passiveLevels[i];
     if (key === 'magnet') {
       stats.magnet += initialStats.magnet * amount * level;
-      stats.growth += .08 * level;
     } else stats[key] += amount * level;
   }
   player.hp = Math.min(stats.health, player.hp + Math.max(0, stats.health - old));
