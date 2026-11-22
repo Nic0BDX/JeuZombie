@@ -1,22 +1,35 @@
+import { activeWorld, updateCoopWorld, queueCoopCommand, localActor, worldMap, renderTeam, actorAppearance, splitCoopGold } from './coop-world.js';
+import { activeCosmetics, cosmeticSprite, primeCosmeticSprite } from './cosmetics.js';
+import { startCombat, finishCombat, combatHit, combatTaken, combatHeal, combatLevel, combatDeath, combatEquip } from './combat-log.js';
 import { finishRewards, trackKill, trackWeapon, trackEvolution } from './meta.js';
-import { player, updatePlayer, resetPlayer, stats, passiveLevels } from './player.js';
+import { player, updatePlayer, resetPlayer, stats, passiveLevels, useHero } from './player.js';
 import { readInput, movement, stick } from './input.js';
-import { getSprite, tiles, tileHash, creatures, buildCreatures, ghostHound } from './sprites.js';
+import { getSprite, terrainVariants, tileHash, creatures, buildCreatures, ghostHound } from './sprites.js';
 
 import { enemies, invulnerability } from './data/enemies.js';
 import { caps } from './data/waves.js';
 import { characters } from './data/characters.js';
 import { xpGoal, gemTier, utilityCards, chestGold, cardTools } from './data/cards.js';
 import { weapons } from './data/weapons.js';
-import { mobs, updateEnemies } from './enemies.js';
-import { shots, levels, evolved, enemyShot, resetWeapons, updateWeapons, refreshWeapons } from './weapons.js';
+import { mobs, updateEnemies, tuneEnemies } from './enemies.js';
+import { shots, levels, evolved, enemyShot, resetWeapons, updateWeapons, refreshWeapons, useArsenal } from './weapons.js';
 import { loot, drop, attract, resetLoot, updateLoot } from './pickups.js';
 import { resetWaves, updateWaves } from './waves.js';
-import { offer, upgrade, reward, banish, resetCards, utilityOffset } from './passives.js';
+import { offer, upgrade, reward, banish, resetCards, utilityOffset, useHand } from './passives.js';
 import { sound, vibrate, soundIds } from './audio.js';
 import { save, persist } from './save.js';
 
-export const run={ mode:'menu', elapsed:0, xp:0, goal:xpGoal(1,1), level:1, kills:0, gold:0, paid:0, rerolls:cardTools.rerolls, skips:cardTools.skips, banishes:cardTools.banishes, chests:0, reward:-1, boss:-1, enemyCount:0 };
+const soloRun={ mode:'menu', elapsed:0, xp:0, goal:xpGoal(1,1), level:1, kills:0, gold:0, paid:0, rerolls:cardTools.rerolls, skips:cardTools.skips, banishes:cardTools.banishes, chests:0, reward:-1, boss:-1, enemyCount:0 };
+export let run=soloRun;
+let actor=0, soloAppearance=null;
+function appearance(index=actor) { return activeWorld()?actorAppearance(index):soloAppearance; }
+export function useGameSlot(slot=null) {
+  actor=slot?.index??0; run=slot?.run??soloRun;
+  useHero(actor); useArsenal(actor); useHand(actor);
+  if(slot) { slot.avatar=player; slot.stats=stats; }
+}
+export function newCoopRun() { return {...soloRun}; }
+export function viewportSize() { return scene; }
 const effects=Array.from({length:caps.effects},()=>({life:0,x:0,y:0,vx:0,vy:0,label:'',color:'',bold:false}));
 const numbers=Array.from({length:1000},(_,i)=>String(i));
 const chainLinks=[3,3], noDash=[];
@@ -31,27 +44,42 @@ function bank() {
 }
 
 export function background() {
-  if(run.mode==='playing') run.mode='pause';
+  if(run.mode==='playing' && !activeWorld()) run.mode='pause';
   bank();
 }
 
-export function start(character, startingWeapon=characters[character].weapon) {
+export function start(character, startingWeapon=characters[character].weapon, shared=null) {
+  if(!shared) {
+    useGameSlot();
+    tuneEnemies();
+    startCombat(character,{weapon:startingWeapon});
+    soloAppearance=activeCosmetics(character);
+    primeCosmeticSprite(character,soloAppearance?.skin??soloAppearance?.character);
+  }
   run.score=run.bossKills=run.firstWinBonus=run.achievementGold=0;
   run.mode='playing'; run.elapsed=run.xp=run.kills=run.gold=run.paid=run.chests=0;
   run.level=1; run.reward=run.boss=-1; run.enemyCount=0;
-  bossSpawned=false; impact=shake=cursor=0;
+  const clear=!shared || shared.index===0;
+  if(clear) { bossSpawned=false; impact=shake=cursor=0; }
   resetPlayer(character);
   run.goal=xpGoal(1,stats.growth);
   run.rerolls=cardTools.rerolls+stats.rerolls;
   run.skips=cardTools.skips; run.banishes=cardTools.banishes+stats.banishes;
   resetCards();
-  resetWeapons(startingWeapon); trackWeapon(startingWeapon); refreshWeapons(); resetWaves();
-  for(let i=0;i<mobs.length;i++) mobs[i].active=false;
-  resetLoot();
-  for(let i=0;i<effects.length;i++) effects[i].life=0;
+  resetWeapons(startingWeapon,clear);
+  if(!shared || shared.index===localActor()) trackWeapon(startingWeapon);
+  refreshWeapons();
+  if(clear) {
+    resetWaves();
+    for(let i=0;i<mobs.length;i++) mobs[i].active=false;
+    resetLoot();
+    for(let i=0;i<effects.length;i++) effects[i].life=0;
+  }
 }
 
-function finish(mode) {
+export function finish(mode,cooperative=false) {
+  if(run.mode==='won' || run.mode==='lost') return;
+  if(!cooperative) finishCombat(mode==='won'?'win':'loss',run.elapsed,run.bossKills);
   run.gold+=finishRewards(run,mode==='won',stats.goldGain);
   run.mode=mode;
   sound(mode==='won' ? soundIds.victory : soundIds.defeat);
@@ -59,16 +87,20 @@ function finish(mode) {
 }
 
 export function choose(id) {
+  if(queueCoopCommand('choose',id)) return;
   if(run.mode!=='level') return;
   if(id>=utilityOffset) {
     const card=utilityCards[id-utilityOffset];
     if(!card) return;
-    player.hp=Math.min(stats.health,player.hp+stats.health*card[2]);
+    heal(stats.health*card[2]);
     if(card[3]) addGold(card[3]);
   } else {
     const growth=stats.growth;
     upgrade(id);
-    if(id>=0 && id<levels.length) trackWeapon(id);
+    if(id>=0 && id<levels.length) {
+      combatEquip(id,actor);
+      if(!activeWorld() || actor===localActor()) trackWeapon(id);
+    }
     sound(soundIds.choose);
     if(stats.growth!==growth) {
       run.xp*=stats.growth/growth;
@@ -79,10 +111,11 @@ export function choose(id) {
   interrupt();
 }
 
-export function reroll() { if(run.mode==='level' && run.rerolls>0) { run.rerolls--; offer(); } }
-export function skip() { if(run.mode==='level' && run.skips>0) { run.skips--; choose(-1); } }
+export function reroll() { if(queueCoopCommand('reroll')) return; if(run.mode==='level' && run.rerolls>0) { run.rerolls--; offer(); } }
+export function skip() { if(queueCoopCommand('skip')) return; if(run.mode==='level' && run.skips>0) { run.skips--; choose(-1); } }
 
 export function banishCard(id) {
+  if(queueCoopCommand('banish',id)) return true;
   if(run.mode!=='level' || !run.banishes || !banish(id)) return false;
   run.banishes--;
   return true;
@@ -95,14 +128,16 @@ function particle(x,y,vx,vy,life,label,color,bold=false) {
   p.x=x; p.y=y; p.vx=vx; p.vy=vy; p.life=life; p.label=label; p.color=color; p.bold=bold;
 }
 
-function hit(m,damage,critical) {
-  if(stats.lifeSteal) player.hp=Math.min(stats.health,player.hp+Math.min(m.hp,damage)*stats.lifeSteal);
+export function hit(m,damage,critical,weapon=-1,owner=actor) {
+  const dealt=Math.max(0,Math.min(m.hp,damage));
+  combatHit(dealt,weapon,damage>=m.hp,owner,run.elapsed);
+  if(stats.lifeSteal) heal(dealt*stats.lifeSteal);
   m.hp-=damage; m.flash=.1;
   if(save.options.quality && (critical || !reduced)) particle(m.x,m.y-8,0,-24,.5,numbers[Math.min(999,Math.round(damage))],critical ? '#ffe98e' : '#fff3d1',critical);
   if(impact<=0) { sound(1); impact=.075; }
   if(m.hp>0) return;
   m.active=false; run.kills++;
-  trackKill(m.kind); if(m.kind>=6) run.bossKills++;
+  if(!activeWorld() || actor===localActor()) trackKill(m.kind); if(m.kind>=6) run.bossKills++;
   drop(0,m.x,m.y,enemies[m.kind].xp);
   if(m.kind===8) run.chests++;
   else if(m.kind>=5) drop(5,m.x,m.y);
@@ -114,22 +149,29 @@ function hit(m,damage,critical) {
     else if(roll<.13) drop(4,m.x,m.y,2);
   }
   const count=reduced ? 0 : save.options.quality*2;
-  for(let i=0;i<count;i++) particle(m.x,m.y,(Math.random()-.5)*70,(Math.random()-.5)*70,.28,'',enemies[m.kind].color);
+  for(let i=0;i<count;i++) particle(m.x,m.y,(Math.random()-.5)*70,(Math.random()-.5)*70,.28,'',appearance(owner)?.death?.color??enemies[m.kind].color);
   if(m.kind>=5) shake=.24;
   sound(2);
 }
 
-function hurt(damage) {
+export function hurt(damage) {
+  if(activeWorld() && run.mode==='level') return;
   if(player.inv>0 || player.hp<=0) return;
   if(stats.dodge>0 && Math.random()<stats.dodge) { player.inv=.18; return; }
-  player.hp=Math.max(0,player.hp-Math.max(1,damage-stats.armor));
+  const taken=Math.min(player.hp,Math.max(1,damage-stats.armor));
+  player.hp-=taken; combatTaken(taken,actor);
   player.inv=invulnerability;
   shake=.17; sound(6); vibrate(20);
 }
 
-function collect(kind,value) {
+function heal(value) {
+  const healed=Math.min(value,stats.health-player.hp);
+  if(healed>0) { player.hp+=healed; combatHeal(healed,actor); }
+}
+
+export function collect(kind,value) {
   if(kind===0) { run.xp+=value*stats.growth*stats.growth; sound(3); }
-  else if(kind===1) player.hp=Math.min(stats.health,player.hp+30);
+  else if(kind===1) heal(30);
   else if(kind===2) attract();
   else if(kind===3) {
     for(let i=0;i<mobs.length;i++) {
@@ -137,21 +179,21 @@ function collect(kind,value) {
       if(m.active && Math.abs(m.x-player.x)<scene.width/2 && Math.abs(m.y-player.y)<scene.height/2) hit(m,m.hp,true);
     }
     shake=.28;
-  } else if(kind===4) addGold(value);
+  } else if(kind===4) { if(!splitCoopGold(value,actor)) addGold(value); }
   else run.chests++;
 }
 
-function interrupt() {
+export function interrupt() {
   if(run.chests) {
-    run.chests--; run.reward=reward(); if(run.reward>=levels.length) trackEvolution(run.reward-levels.length); addGold(chestGold);
+    run.chests--; run.reward=reward(); if(run.reward>=0 && run.reward<levels.length) combatEquip(run.reward,actor); if(run.reward>=levels.length && (!activeWorld() || actor===localActor())) trackEvolution(run.reward-levels.length); addGold(chestGold);
     sound(run.reward>=weapons.length ? soundIds.evolve : soundIds.chest); vibrate(45); run.mode='chest';
   } else if(run.xp>=run.goal) {
-    run.xp-=run.goal; run.level++; run.goal=xpGoal(run.level,stats.growth);
+    run.xp-=run.goal; run.level++; run.goal=xpGoal(run.level,stats.growth); combatLevel(run.level,actor);
     offer(); sound(soundIds.level); sound(soundIds.cards); vibrate(35); run.mode='level';
   }
 }
 
-export function dismissChest() { run.mode='playing'; interrupt(); }
+export function dismissChest() { if(queueCoopCommand('chest')) return; run.mode='playing'; interrupt(); }
 let reduced=false;
 export function reduceEffects(value) { reduced=value; }
 
@@ -179,6 +221,7 @@ export function resize(canvas) {
 }
 
 export function update(dt) {
+  if(activeWorld()) { updateCoopWorld(dt); animateEffects(dt); return; }
   if(run.mode!=='playing') return;
   run.elapsed+=dt;
   readInput();
@@ -197,17 +240,21 @@ export function update(dt) {
     if(run.boss<0 || mobs[i].kind>mobs[run.boss].kind) run.boss=i;
     if(mobs[i].kind===8) finalBoss=true;
   }
+  animateEffects(dt);
+  if(player.hp<=0) { combatDeath(0); finish('lost'); }
+  else if(bossSpawned && !finalBoss) {
+    if(run.chests || run.xp>=run.goal) interrupt();
+    else finish('won');
+  } else interrupt();
+}
+
+function animateEffects(dt) {
   shake=Math.max(0,shake-dt); impact-=dt;
   for(let i=0;i<effects.length;i++) {
     const p=effects[i];
     if(p.life<=0) continue;
     p.life-=dt; p.x+=p.vx*dt; p.y+=p.vy*dt;
   }
-  if(player.hp<=0) finish('lost');
-  else if(bossSpawned && !finalBoss) {
-    if(run.chests || run.xp>=run.goal) interrupt();
-    else finish('won');
-  } else interrupt();
 }
 
 export function render() {
@@ -216,16 +263,24 @@ export function render() {
   const left=Math.round(player.x+Math.sin(run.elapsed*150)*jitter)-cx;
   const top=Math.round(player.y+Math.cos(run.elapsed*131)*jitter)-cy;
   const px=Math.round(player.x)-left, py=Math.round(player.y)-top;
+  const tiles=terrainVariants[worldMap()];
   for (let y = Math.floor(top / 32); y * 32 < top + scene.height; y++) {
     for (let x = Math.floor(left / 32); x * 32 < left + scene.width; x++) {
       art.drawImage(tiles[tileHash(x, y) & 15], x * 32 - left, y * 32 - top);
     }
   }
   renderEntities(left,top);
+  renderTeam(art,left,top,scene.width,scene.height);
+  const look=appearance();
+  if(look?.trail && player.stride>0 && !reduced) {
+    art.fillStyle=look.trail.color;
+    art.fillRect(px-Math.round(player.dx*11),py-Math.round(player.dy*11),3,2);
+    art.fillRect(px-Math.round(player.dx*16),py-Math.round(player.dy*16),2,1);
+  }
   art.fillStyle = '#15191c';
   art.fillRect(px - 5, py + 5, 10, 3);
   art.setTransform(player.facing, 0, 0, 1, px, py);
-  if(!player.inv || Math.floor(player.inv*20)%2===0) art.drawImage(getSprite(player.sprite, player.frame), -8, -8);
+  if(!player.inv || Math.floor(player.inv*20)%2===0) art.drawImage(cosmeticSprite(player.character,player.frame,look?.skin??look?.character)??getSprite(player.sprite,player.frame), -8, -8);
   art.resetTransform();
   if(run.mode!=='menu') {
     art.fillStyle='#17181c'; art.fillRect(px-9,py+9,18,3);
@@ -298,7 +353,7 @@ function renderEntities(left,top) {
     if(!visible(x,y,s.area+8)) continue;
     const weapon=weapons[s.kind];
     const visual=weapon?.effetVisuel;
-    const color=weapon?.color ?? '#f28eaa';
+    const color=weapon ? appearance(s.owner)?.weapon?.color??weapon.color : '#f28eaa';
     art.strokeStyle=art.fillStyle=color;
     art.lineWidth=s.strong ? 3 : 1;
     art.globalAlpha=s.wait>0 ? .9 : Math.min(1,s.life*8);

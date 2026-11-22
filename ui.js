@@ -1,4 +1,9 @@
-import { selectedCharacter, selectedWeapon, seeWeapon } from './meta.js';
+import { selectedWeapon, seeWeapon } from './meta.js';
+import { activeWorld, choiceTime, triggerEmote, leaveCoopWorld, coopPause, emotes } from './coop-world.js';
+import { coop } from './coop-net.js';
+import { selectedCharacter } from './meta.js';
+import { drawCosmetics, bindCosmetics, cosmeticsState } from './cosmetics-ui.js';
+import { drawCombat, drawCombatResult, openCombatHistory, bindCombat } from './combat-ui.js';
 import { bindSocial, drawSocial, socialMode } from './social-ui.js';
 import { drawProfile, bindProfile, retryProfile } from './profile-ui.js';
 import { bindMetaVolumes, drawMeta, drawRunResult, handleMeta } from './meta-ui.js';
@@ -33,6 +38,29 @@ function screen(title,content,tag='h2') { panel.innerHTML='<'+tag+'>'+title+'</'
 function actions(content) { return '<div class="actions">'+content+'</div>'; }
 
 const metaUi={btn,card,screen,actions};
+const quick=document.querySelector('#quick-emotes');
+const countdowns=Array.from({length:11},(_,i)=>String(i)+' s');
+let lastCountdown=-1, replaying=false;
+quick.innerHTML='<button type="button" aria-expanded="false" data-emote="toggle">Emotes</button><div hidden>'+
+  emotes.map((label,i)=>'<button type="button" data-emote="'+i+'">'+label+'</button>').join('')+'</div>';
+quick.addEventListener('click',event=>{
+  const target=event.target.closest('button[data-emote]');
+  if(!target) return;
+  const choices=quick.querySelector('div'), toggle=quick.firstElementChild;
+  if(target.dataset.emote==='toggle') choices.hidden=!choices.hidden;
+  else { triggerEmote(Number(target.dataset.emote)); choices.hidden=true; }
+  toggle.setAttribute('aria-expanded',!choices.hidden);
+});
+function showLobby() {
+  if(replaying) return;
+  replaying=true;
+  leaveCoopWorld(true).finally(()=>{
+    replaying=false; run.mode='menu'; page='friends'; syncUi(true);
+  });
+}
+addEventListener('cendres:coop-cards',()=>{ if(run.mode==='level'||run.mode==='chest') syncUi(true); });
+bindCombat(panel,()=>{ if(page==='combat'||run.mode==='won'||run.mode==='lost') syncUi(true); },showLobby);
+bindCosmetics(panel,()=>{ if(run.mode==='menu'&&page==='cosmetics') syncUi(true); },selectedCharacter);
 bindMetaVolumes(panel);
 bindSocial(panel,()=>{ if(run.mode==='menu' && page==='friends') syncUi(true); },()=>{
   page='friends'; if(run.mode==='menu') syncUi(true);
@@ -44,6 +72,8 @@ function drawMenu() {
   if(run.mode==='menu') {
     if(page==='profile') drawProfile(metaUi);
     else if(page==='friends') drawSocial(metaUi);
+    else if(page==='cosmetics') drawCosmetics(metaUi,selectedCharacter());
+    else if(page==='combat') drawCombat(metaUi);
     else if(!drawMeta(page,metaUi)) screen('Les Cendres du Marais',actions(btn('Touche pour jouer','home','primary')),'h1');
   } else if(run.mode==='pause') {
     if(page==='pauseOptions') drawMeta(page,metaUi);
@@ -59,7 +89,7 @@ function drawMenu() {
         (banishMode && id>=utilityOffset?' disabled':'')+'><b>'+c.icon+'</b><span><em>'+rarity[0]+' · '+c.tag+
         '</em><strong>'+c.name+(c.rank?' <span class="card-rank">'+c.rank+'</span>':'')+'</strong><small>'+c.desc+'</small></span></button>';
     }
-    screen('Niveau '+run.level,(banishMode?'<p>Choisis une carte à bannir.</p>':'')+actions(list)+'<div class="split card-tools">'+
+    screen('Niveau '+run.level+(activeWorld()?' <span id="choice-timer" aria-live="off"></span>':''),(banishMode?'<p>Choisis une carte à bannir.</p>':'')+actions(list)+'<div class="split card-tools">'+
       btn('Relancer · '+run.rerolls,'reroll','',!run.rerolls || banishMode)+
       btn('Passer · '+run.skips,'skip','',!run.skips || banishMode)+
       btn(banishMode?'Annuler':'Bannir · '+run.banishes,'banish','',!run.banishes || !choices.some(id=>id>=0&&id<utilityOffset))+'</div>');
@@ -67,7 +97,7 @@ function drawMenu() {
     const id=run.reward;
     const label=id<0 ? '12 or' : id>=offset ? weapons[id-offset].evolution.nomEvolue : weapons[id].nom+' · niv. '+levels[id];
     screen('Coffre', '<div class="chest'+(id>=offset ? ' evolved' : '')+'" aria-hidden="true">'+(id>=offset ? '✦' : '⬙')+'</div><p>'+label+'</p>'+actions(btn('Continuer','chest','primary')));
-  } else drawRunResult(run,times[Math.min(3600,Math.floor(run.elapsed))],levels,evolved,metaUi);
+  } else if(!drawCombatResult(metaUi)) drawRunResult(run,times[Math.min(3600,Math.floor(run.elapsed))],levels,evolved,metaUi);
 }
 
 function drawKit() {
@@ -88,12 +118,18 @@ export function syncUi(force=false) {
   if(previous!==run.mode) socialMode(run.mode);
   if(force || previous!==run.mode) {
     previous=run.mode;
+    lastCountdown=-1;
     document.documentElement?.classList?.toggle('left-handed',save.options.leftHanded);
     if(run.mode!=='level') banishMode=false;
     hud.hidden=run.mode==='menu';
     menu.hidden=run.mode==='playing';
     if(!menu.hidden) drawMenu();
     else drawKit();
+  }
+  quick.hidden=!activeWorld() || run.mode!=='playing';
+  if(activeWorld() && run.mode==='level') {
+    const remaining=Math.max(0,Math.min(10,Math.ceil(choiceTime())));
+    if(remaining!==lastCountdown) { lastCountdown=remaining; const output=document.querySelector('#choice-timer'); if(output) output.textContent=countdowns[remaining]; }
   }
   if(hud.hidden) return;
   const second=Math.min(3600,Math.floor(run.elapsed));
@@ -120,14 +156,19 @@ function screenOrientationLock() {
   window.screen.orientation?.lock?.('portrait')?.catch(()=>{});
 }
 
-pause.addEventListener('click',()=>{ if(run.mode==='playing') { page='pauseMenu'; background(); syncUi(); } });
+pause.addEventListener('click',()=>{ if(run.mode==='playing') { page='pauseMenu'; if(!coopPause(true)) background(); syncUi(); } });
 panel.addEventListener('click',event=>{
   const target=event.target.closest('button[data-do]');
   if(!target || target.disabled) return;
   const action=target.dataset.do;
   if(action==='accountRetry') retryProfile();
-  else if(action.startsWith('m:')) page=handleMeta(action,page);
+  else if(action.startsWith('m:')) {
+    page=handleMeta(action,page);
+    if(page==='combat' && action==='m:page:combat') openCombatHistory();
+    if(page==='cosmetics' && action==='m:page:cosmetics') cosmeticsState();
+  }
   else if(action==='play') {
+    if(coop.id) leaveCoopWorld();
     unlock();
     if(matchMedia('(display-mode: fullscreen)').matches || navigator.standalone) {
       screenOrientationLock();
@@ -135,8 +176,8 @@ panel.addEventListener('click',event=>{
     start(selectedCharacter(),selectedWeapon());
   }
   else if(action==='home') { unlock(); page='home'; }
-  else if(action==='exit') { background(); run.mode='menu'; page='home'; }
-  else if(action==='resume') { unlock(); run.mode='playing'; }
+  else if(action==='exit') { if(coop.id) leaveCoopWorld(); background(); run.mode='menu'; page='home'; }
+  else if(action==='resume') { unlock(); if(!coopPause(false)) run.mode='playing'; }
   else if(action==='chest') dismissChest();
   else if(action==='continue') choose(-1);
   else if(action==='reroll') reroll();

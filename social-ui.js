@@ -1,3 +1,4 @@
+import { drawCoopLobby, bindCoopLobby } from './coop-lobby.js';
 import { social, friendStatus, socialAction, setSocialPlaying } from './social.js';
 
 const escape=text=>String(text??'').replace(/[&<>"']/g,ch=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[ch]);
@@ -13,7 +14,7 @@ export function drawSocial(ui) {
   const room=social.room;
   let rooms='<form data-social-form="join" class="account-form"><label>Code du salon <input name="value" maxlength="4" minlength="4" autocomplete="off" autocapitalize="characters" required></label><button>Rejoindre le salon</button></form>';
   if(room) rooms='<section class="social-room"><h3>Salon '+escape(room.code)+'</h3><p>'+room.members.map(p=>escape(p.pseudo)).join(' · ')+'</p>'+
-    '<div class="split">'+button(copied?'Lien copié':'Copier le lien','copy')+button('Quitter','room:leave')+'</div></section>'+rooms;
+    '<div class="split">'+button(copied?'Lien copié':'Copier le lien','copy')+button('Quitter','room:leave')+'</div>'+drawCoopLobby()+'</section>'+rooms;
   else rooms=ui.actions(button('Créer un salon','room:create'))+rooms;
   let friends='';
   for(const p of social.friends) {
@@ -77,6 +78,7 @@ export function bindSocial(panel,refresh,open) {
   }
   panel.addEventListener('click',click);
   banner.addEventListener('click',click);
+  bindCoopLobby(panel,render);
   panel.addEventListener('submit',async event=>{
     const form=event.target, action=form.dataset.socialForm;
     if(!action) return;

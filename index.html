@@ -88,6 +88,12 @@ summary{min-height:48px;padding:12px 8px;cursor:pointer;text-align:left;backgrou
 .social-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
 #social-banner{position:absolute;z-index:5;top:calc(env(safe-area-inset-top) + 84px);left:50%;transform:translateX(-50%);display:flex;gap:4px;width:max-content;max-width:96%}
 #social-banner button:first-child{background:#3a5349}
+.coop-settings{display:grid;gap:6px;margin-top:8px}
+.coop-settings select{min-height:48px;font:inherit}
+#quick-emotes{position:absolute;top:calc(env(safe-area-inset-top) + 76px);right:calc(env(safe-area-inset-right) + 8px);z-index:4;display:grid;justify-items:end;gap:4px}
+#quick-emotes>div{display:grid;grid-template-columns:repeat(2,minmax(48px,1fr));gap:4px}
+.left-handed #quick-emotes{right:auto;left:calc(env(safe-area-inset-left) + 8px);justify-items:start}
+#choice-timer{color:#ffdc93;font:inherit}
 </style>
 <canvas aria-label="Les Cendres du Marais"></canvas>
 <div id="hud" hidden>
@@ -96,6 +102,7 @@ summary{min-height:48px;padding:12px 8px;cursor:pointer;text-align:left;backgrou
   <div id="boss" hidden><span></span><div class="track"><i></i></div></div>
   <div id="kit"></div>
 </div>
+<aside id="quick-emotes" aria-label="Emotes rapides" hidden></aside>
 <aside id="social-banner" aria-label="Invitations" hidden></aside>
 <section id="menu"><div id="panel"></div></section>
 <output id="fps">– FPS</output>

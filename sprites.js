@@ -106,3 +106,14 @@ hound.fillRect(4,11,2,2); hound.fillRect(10,11,2,2);
 hound.fillStyle='#e2fbf9';
 hound.fillRect(13,7,1,1);
 export const ghostHound=hound.canvas;
+
+export const terrainVariants=[tiles];
+for(const color of ['#425c4d','#523d51']) {
+  terrainVariants.push(tiles.map(tile=>{
+    const ctx=surface(32);
+    ctx.drawImage(tile,0,0);
+    ctx.globalCompositeOperation='source-atop';
+    ctx.globalAlpha=.26; ctx.fillStyle=color; ctx.fillRect(0,0,32,32);
+    return ctx.canvas;
+  }));
+}

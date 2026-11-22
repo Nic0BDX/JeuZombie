@@ -1,6 +1,10 @@
 import { bindInput } from './input.js';
 import { resize, update, render, background, reduceEffects, run } from './game.js';
 
+import { startCoopNetwork } from './coop-net.js';
+import { activeWorld, initCoopWorld } from './coop-world.js';
+import { startCosmetics } from './cosmetics.js';
+import { initCombatSync } from './combat-log.js';
 import { startSocial } from './social.js';
 import { startAccounts } from './online.js';
 import { syncUi } from './ui.js';
@@ -16,6 +20,10 @@ fit();
 bindInput(canvas);
 syncUi();
 startSocial();
+initCoopWorld();
+startCoopNetwork();
+startCosmetics();
+initCombatSync();
 startAccounts();
 addEventListener('resize', fit);
 window.visualViewport?.addEventListener('resize', fit);
@@ -39,7 +47,7 @@ function frame(now) {
     time -= step;
   }
   const interval=step*(slow ? 2 : 1);
-  if((run.mode==='playing' || run.mode!==lastMode || dirty) && (!rendered || now-rendered >= interval-1)) {
+  if((run.mode==='playing' || activeWorld() || run.mode!==lastMode || dirty) && (!rendered || now-rendered >= interval-1)) {
     lastMode=run.mode;
     dirty=false;
     render();
@@ -50,7 +58,7 @@ function frame(now) {
   }
   const elapsed = now - report;
   if (elapsed < 1000) return;
-  if(run.mode!=='playing') { report=now; samples=draws=0; return; }
+  if(run.mode!=='playing' && !activeWorld()) { report=now; samples=draws=0; return; }
   const refresh = samples * 1000 / elapsed;
   slow = refresh < (slow ? 56 : 50);
   reduceEffects(refresh < 45 || draws * 1000 / elapsed < 45 && !slow);

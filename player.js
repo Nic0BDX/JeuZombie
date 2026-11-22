@@ -3,9 +3,12 @@ import { initialStats, passives } from './data/passives.js';
 import { shop } from './data/shop.js';
 import { save } from './save.js';
 
-export const player = { x:0, y:0, facing:1, frame:0, stride:0, sprite:'wanderer', dx:1, dy:0, hp:100, inv:0, character:0 };
-export const stats = { ...initialStats };
-export const passiveLevels = new Uint8Array(passives.length);
+const heroes=Array.from({length:4},()=>({avatar:{ x:0, y:0, facing:1, frame:0, stride:0, sprite:'wanderer', dx:1, dy:0, hp:100, inv:0, character:0 },stats:{ ...initialStats },passives:new Uint8Array(passives.length)}));
+export let player=heroes[0].avatar, stats=heroes[0].stats, passiveLevels=heroes[0].passives;
+export function useHero(index) {
+  const hero=heroes[index];
+  player=hero.avatar; stats=hero.stats; passiveLevels=hero.passives;
+}
 
 export function recalc() {
   const old = stats.health;

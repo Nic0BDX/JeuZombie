@@ -21,17 +21,20 @@ export function rebuild() {
   }
 }
 
+let maxEnemies=mobs.length, hpScale=1, mobSerial=0;
+export function tuneEnemies(multiplier=1, max=mobs.length) { hpScale=multiplier; maxEnemies=max; }
+
 export function spawn(kind,x,y,minute) {
-  for (let i=0;i<mobs.length;i++) {
+  for (let i=0;i<maxEnemies;i++) {
     const m=mobs[i];
     if (m.active) continue;
-    trackEnemy(kind); m.active=true; m.kind=kind; m.x=x; m.y=y; m.flash=0; m.burn=m.poison=m.slow=m.stun=m.tick=m.kx=m.ky=m.knock=m.burnDmg=m.poisonDmg=0;
-    m.max=m.hp=enemies[kind].hp*(kind>=6 ? 1 : 1+minute*hpGrowth);
+    trackEnemy(kind); m.active=true; m.serial=++mobSerial; m.kind=kind; m.x=x; m.y=y; m.flash=0; m.burn=m.poison=m.slow=m.stun=m.tick=m.kx=m.ky=m.knock=m.burnDmg=m.poisonDmg=0;
+    m.max=m.hp=enemies[kind].hp*hpScale*(kind>=6 ? 1 : 1+minute*hpGrowth);
     m.fire=enemies[kind].fire;
     return;
   }
   if (kind >= 5) {
-    for (let i=0;i<mobs.length;i++) {
+    for (let i=0;i<maxEnemies;i++) {
       if (mobs[i].kind>=5) continue;
       mobs[i].active=false;
       spawn(kind,x,y,minute);
@@ -40,10 +43,12 @@ export function spawn(kind,x,y,minute) {
   }
 }
 
-export function inflict(m,status,duration,damage) {
+export function inflict(m,status,duration,damage,owner,weapon) {
   if(status==='stun' && m.kind>=6) duration*=.35;
   if(status==='burn') m.burnDmg=m.burn>0 ? Math.max(m.burnDmg,damage*.24) : damage*.24;
   if(status==='poison') m.poisonDmg=m.poison>0 ? Math.max(m.poisonDmg,damage*.18) : damage*.18;
+  if(status==='burn') { m.burnOwner=owner; m.burnWeapon=weapon; }
+  if(status==='poison') { m.poisonOwner=owner; m.poisonWeapon=weapon; }
   m[status]=Math.max(m[status],duration);
 }
 
@@ -59,7 +64,8 @@ function tickStatuses(m,dt,hit) {
     m.tick-=dt;
     if(m.tick<=0) {
       m.tick+=.45;
-      hit(m,(m.burn>0 ? m.burnDmg : 0)+(m.poison>0 ? m.poisonDmg : 0),false);
+      if(m.burn>0) hit(m,m.burnDmg,false,m.burnWeapon,m.burnOwner);
+      if(m.active && m.poison>0) hit(m,m.poisonDmg,false,m.poisonWeapon,m.poisonOwner);
     }
   } else m.tick=0;
   m.burn=Math.max(0,m.burn-dt);
@@ -69,15 +75,22 @@ function tickStatuses(m,dt,hit) {
   m.knock=Math.max(0,m.knock-dt);
 }
 
-export function updateEnemies(dt,minute,hurt,shoot,hit) {
+export function updateEnemies(dt,minute,hurt,shoot,hit,party=null) {
   rebuild();
   for (let i=0;i<mobs.length;i++) {
     const m=mobs[i];
     if (!m.active) continue;
     tickStatuses(m,dt,hit);
     if(!m.active) continue;
-    const type=enemies[m.kind], dx=player.x-m.x, dy=player.y-m.y;
-    const d2=dx*dx+dy*dy;
+    const type=enemies[m.kind];
+    let target=player,targetIndex=0,best=Infinity;
+    if(party) for(let j=0;j<party.length;j++) {
+      const p=party[j].avatar;
+      if(p.hp<=0 || party[j].gone) continue;
+      const d=(p.x-m.x)**2+(p.y-m.y)**2;
+      if(d<best) { best=d; target=p; targetIndex=j; }
+    }
+    const dx=target.x-m.x,dy=target.y-m.y,d2=dx*dx+dy*dy;
     if(m.kind<5 && d2>810000) { m.active=false; continue; }
     const d=Math.sqrt(d2)||1;
     const ranged=type.fire>0 && d<100;
@@ -103,7 +116,7 @@ export function updateEnemies(dt,minute,hurt,shoot,hit) {
     const reach=type.radius+5;
     const damage=type.damage*(1+minute*damageGrowth);
     if(m.stun>0) continue;
-    if(d2<reach*reach) hurt(damage);
+    if(d2<reach*reach) hurt(damage,targetIndex);
     if(!type.fire || d2>36000) continue;
     m.fire-=dt;
     if(m.fire>0) continue;

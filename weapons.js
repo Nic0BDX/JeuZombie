@@ -4,14 +4,20 @@ import { player, stats } from './player.js';
 import { mobs, bucket, head, links, inflict, push } from './enemies.js';
 import { sound } from './audio.js';
 
-export const levels=new Uint8Array(weapons.length), evolved=new Uint8Array(weapons.length);
-const timers=new Float32Array(weapons.length);
-export const shots=Array.from({length:caps.shots},()=>({life:0,total:0,kind:0,x:0,y:0,vx:0,vy:0,damage:0,area:0,pierce:0,mark:0,wait:0,strong:false, config:null, reach:0, phase:0, interval:0}));
+const arsenal=Array.from({length:4},()=>({levels:new Uint8Array(weapons.length),evolved:new Uint8Array(weapons.length),
+ timers:new Float32Array(weapons.length),configs:weapons.map(()=>({})),swing:1,orbit:0,cooldown:0}));
+let actor=0, kit=arsenal[0];
+export let levels=kit.levels,evolved=kit.evolved;
+let timers=kit.timers,configs=kit.configs;
+export function useArsenal(index) {
+  actor=index; kit=arsenal[index];
+  levels=kit.levels; evolved=kit.evolved; timers=kit.timers; configs=kit.configs;
+}
+export const shots=Array.from({length:caps.shots},()=>({life:0,total:0,kind:0,x:0,y:0,vx:0,vy:0,damage:0,area:0,pierce:0,mark:0,wait:0,strong:false, config:null, owner:0, reach:0, phase:0, interval:0}));
 const contacted=new Uint32Array(caps.shots*caps.enemies);
-const configs=weapons.map(()=>({}));
 const baseLevel={spread:.18,mirror:false,ricochet:false,chain:false,echo:false,poison:0,stun:0};
 const factorKeys=new Set(['degats','zone','cooldown','duree']);
-let sequence=0, swing=1, orbit=0, cooldown=0;
+let sequence=0;
 
 export function hasSynergy(id, preview=false) {
   if(!weapons[id].tags.includes(synergyTag)) return false;
@@ -52,17 +58,20 @@ export function refreshWeapons() {
   }
 }
 
-export function resetWeapons(start) {
+export function resetWeapons(start,clear=true) {
   levels.fill(0); evolved.fill(0); timers.fill(0); levels[start]=1;
-  for(let i=0;i<shots.length;i++) shots[i].life=0;
-  contacted.fill(0); sequence=0; swing=1; orbit=0; cooldown=0;
+  if(clear) {
+    for(let i=0;i<shots.length;i++) shots[i].life=0;
+    contacted.fill(0); sequence=0;
+  }
+  kit.swing=1; kit.orbit=0; kit.cooldown=0;
 }
 
 function projectile(kind,x,y,vx,vy,damage,area,life,pierce,wait=0) {
   for(let i=0;i<shots.length;i++) {
     const s=shots[i];
     if(s.life>0) continue;
-    s.life=s.total=life; s.kind=kind; s.x=x; s.y=y; s.vx=vx; s.vy=vy;
+    s.life=s.total=life; s.kind=kind; s.owner=kind<0 ? -1 : actor; s.x=x; s.y=y; s.vx=vx; s.vy=vy;
     s.damage=damage; s.area=area; s.pierce=pierce; s.mark=++sequence;
     s.wait=wait; s.strong=kind>=0 && !!evolved[kind];
     s.config=kind>=0 ? configs[kind] : null;
@@ -149,8 +158,8 @@ function fan(id,c,angle) {
 
 const behaviors={
   arc:{fire(id,c) {
-    swing=-swing;
-    for(let i=0;i<c.projectiles;i++) emit(id,c,player.x,player.y,(c.mirror && i%2 ? -1 : 1)*swing,i*7,c.zone+i*6);
+    kit.swing=-kit.swing;
+    for(let i=0;i<c.projectiles;i++) emit(id,c,player.x,player.y,(c.mirror && i%2 ? -1 : 1)*kit.swing,i*7,c.zone+i*6);
     return true;
   },step(s) { follow(s); s.y+=s.vy; return true; }},
   target:{fire(id,c,w,h) {
@@ -159,7 +168,7 @@ const behaviors={
   },step:travel,consume:true},
   direction:{fire(id,c) { return fan(id,c,Math.atan2(player.dy,player.dx)); },step:travel,consume:true},
   orbit:{fire(id,c) {
-    for(let i=0;i<c.projectiles;i++) emit(id,c,player.x,player.y,orbit+i*Math.PI*2/c.projectiles,c.zone,9);
+    for(let i=0;i<c.projectiles;i++) emit(id,c,player.x,player.y,kit.orbit+i*Math.PI*2/c.projectiles,c.zone,9);
     return true;
   },step(s,dt) {
     s.vx+=dt*s.config.vitesse;
@@ -266,37 +275,43 @@ function collisions(s,hit,offset) {
         if(dx*dx+dy*dy>range*range || (s.config.behavior===behaviors.arc && dx*s.vx< -6)) continue;
         contacted[offset+i]=s.mark;
         const c=s.config, critical=Math.random()<c.crit;
-        if(c.status) inflict(m,c.status,c.statusTime,s.damage);
+        if(c.status) inflict(m,c.status,c.statusTime,s.damage,actor,s.kind);
         if(c.recul) push(m,sx,sy,c.recul);
-        hit(m,s.damage*(critical ? 2 : 1),critical);
+        hit(m,s.damage*(critical ? 2 : 1),critical,s.kind,actor);
         if(--s.pierce<=0) { if(c.behavior.consume) s.life=0; return; }
       }
     }
   }
 }
 
-export function updateWeapons(dt,width,height,hit,hurt) {
-  orbit=(orbit+dt*4)%(Math.PI*2);
-  cooldown-=dt;
+export function updateWeapons(dt,width,height,hit,hurt,party=null,fire=true) {
+  kit.orbit=(kit.orbit+dt*4)%(Math.PI*2);
+  kit.cooldown-=dt;
   for(let i=0;i<weapons.length;i++) {
-    if(!levels[i]) continue;
+    if(!fire || !levels[i]) continue;
     timers[i]-=dt;
     if(timers[i]>0) continue;
     const c=configs[i];
     if(c.behavior.fire(i,c,width,height)) {
       timers[i]=c.cooldown;
-      if(cooldown<=0 || evolved[i]) { sound(c.son); cooldown=.13; }
+      if(kit.cooldown<=0 || evolved[i]) { sound(c.son); kit.cooldown=.13; }
     } else timers[i]=.1;
   }
   for(let i=0;i<shots.length;i++) {
     const s=shots[i];
-    if(s.life<=0) continue;
+    if(s.life<=0 || (s.owner!==actor && !(s.owner<0 && actor===0))) continue;
     s.life-=dt;
     if(s.life<=0) continue;
     if(s.kind<0) {
       travel(s,dt);
-      const dx=s.x-player.x,dy=s.y-player.y;
-      if(dx*dx+dy*dy<81) { hurt(s.damage); s.life=0; }
+      if(!party) {
+        const dx=s.x-player.x,dy=s.y-player.y;
+        if(dx*dx+dy*dy<81) { hurt(s.damage); s.life=0; }
+      } else for(let j=0;j<party.length;j++) {
+        const p=party[j].avatar;
+        if(p.hp<=0 || party[j].gone) continue;
+        if((s.x-p.x)**2+(s.y-p.y)**2<81) { hurt(s.damage,j); s.life=0; break; }
+      }
     } else if(s.config.behavior.step(s,dt,width,height) && s.pierce>0) collisions(s,hit,i*caps.enemies);
   }
 }

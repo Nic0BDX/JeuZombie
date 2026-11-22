@@ -116,7 +116,7 @@ export function drawMeta(page,ui){
   const {screen,actions,btn}=ui;
   if(page==='home'){
     screen('Les Cendres du Marais','<p>'+save.gold+' or</p>'+actions(btn('Jouer','m:page:prepare','primary')+
-      btn('Personnages','m:page:characters')+btn('Boutique','m:page:shop')+btn('Collection','m:page:collection')+btn('Profil','m:page:profile')+btn('Amis','m:page:friends')+btn('Options','m:page:options')),'h1');
+      btn('Personnages','m:page:characters')+btn('Boutique','m:page:shop')+btn('Collection','m:page:collection')+btn('Profil','m:page:profile')+btn('Amis','m:page:friends')+btn('Cosmétiques','m:page:cosmetics')+btn('Combats','m:page:combat')+btn('Options','m:page:options')),'h1');
   } else if(page==='characters'||page==='prepareCharacters'){
     screen('Personnages',actions(charactersList(ui,true)+btn('Retour','m:page:'+(page==='characters'?'home':'prepare'))));
   } else if(page==='prepare') drawPreparation(ui);

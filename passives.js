@@ -6,10 +6,15 @@ import { passives, passiveMax } from './data/passives.js';
 import { extraCardLuck, utilityCards } from './data/cards.js';
 
 export const offset=weapons.length, utilityOffset=offset+passives.length;
-export const choices=new Int16Array(4);
-export const rarities=new Uint8Array(4);
+const hands=Array.from({length:4},()=>({choices:new Int16Array(4),rarities:new Uint8Array(4),banned:new Uint8Array(utilityOffset)}));
+export let choices=hands[0].choices, rarities=hands[0].rarities;
+let banned=hands[0].banned;
+export function useHand(index) {
+  const hand=hands[index];
+  choices=hand.choices; rarities=hand.rarities; banned=hand.banned;
+}
 const candidates=new Int16Array(utilityOffset+utilityCards.length);
-const weights=new Float32Array(candidates.length), banned=new Uint8Array(utilityOffset);
+const weights=new Float32Array(candidates.length);
 const tiers=new Uint8Array(candidates.length);
 
 export function resetCards() { choices.fill(-1); banned.fill(0); }
