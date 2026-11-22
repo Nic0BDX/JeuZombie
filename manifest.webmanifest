@@ -1,0 +1,19 @@
+{
+  "id": "./",
+  "name": "Les Cendres du Marais",
+  "short_name": "Cendres",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#191d20",
+  "theme_color": "#191d20",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
