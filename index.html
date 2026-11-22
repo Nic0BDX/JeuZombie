@@ -3,6 +3,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#191d20">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="./icon-192.png">
 <title>Les Cendres du Marais</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <style>
@@ -11,7 +14,47 @@ html,body{margin:0;overflow:hidden;overscroll-behavior:none;background:#191d20;c
 body{height:100dvh;position:relative}
 canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
 #fps{position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:calc(env(safe-area-inset-right) + 12px);font:bold 15px monospace;background:#171a20df;padding:6px 9px;pointer-events:none}
+
+[hidden]{display:none!important}
+:root{font:16px system-ui,sans-serif;color-scheme:dark}
+#fps{top:calc(env(safe-area-inset-top) + 31px);font-size:14px;z-index:3}
+#hud{position:absolute;inset:0;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);font:bold 14px monospace}
+.track{height:8px;background:#161c27;overflow:hidden}
+.track i{display:block;height:100%;background:#71b9ef;width:0}
+.hud-top{display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;padding:4px 10px}
+#clock{text-align:center;font-size:21px}
+button{font:inherit;min-height:48px;min-width:48px;padding:8px 13px;color:#f6edda;background:#373442;border:1px solid #706473;text-align:center;cursor:pointer}
+button:focus-visible{outline:2px solid #bde3ce;outline-offset:2px}
+button:disabled{opacity:.45}
+#pause{justify-self:start;pointer-events:auto;font-size:19px}
+#boss{margin:0 auto;text-align:center;width:min(64%,320px);color:#f9bdc1}
+#boss i{background:#cf6886}
+#kit{position:absolute;left:calc(env(safe-area-inset-left) + 10px);top:calc(env(safe-area-inset-top) + 75px);display:grid;gap:3px}
+#kit span{min-width:28px;background:#171a20de;padding:2px 4px}
+#menu{position:absolute;inset:0;display:flex;align-items:end;justify-content:center;background:#14151db5;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+#panel{width:min(100%,440px);max-height:100%;overflow:auto;overscroll-behavior:contain;touch-action:pan-y;background:#23252f;padding:16px;border:1px solid #696375;box-shadow:0 8px 40px #101116;text-align:center}
+#panel *{touch-action:pan-y}
+h1,h2{font-family:monospace;margin:0 0 12px;color:#f2dbad}
+h1{font-size:clamp(26px,7vw,38px)}
+h2{font-size:24px}
+p{margin:5px 0 12px}
+.actions{display:grid;gap:7px}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}
+.primary{background:#3a5349;border-color:#83aa8d}
+.card{display:grid;grid-template-columns:36px 1fr;align-items:center;text-align:left;min-height:60px}
+.card b:first-child{font-size:23px;color:#badfc3}
+.card small{display:block;font-size:14px;color:#ddd4d5}
+.chest{font-size:46px;color:#ffd98d;animation:open .45s ease-out}
+@keyframes open{0%{transform:scale(.2) rotate(-15deg);opacity:.2}70%{transform:scale(1.18)}}
+@media(max-height:420px){#panel{padding:10px}h1,h2,p{margin-bottom:5px}.actions{gap:4px}}
 </style>
 <canvas aria-label="Les Cendres du Marais"></canvas>
+<div id="hud" hidden>
+  <div class="track"><i id="experience"></i></div>
+  <div class="hud-top"><button id="pause" type="button" aria-label="Pause">Ⅱ</button><span id="clock"></span><span id="level"></span></div>
+  <div id="boss" hidden><span></span><div class="track"><i></i></div></div>
+  <div id="kit"></div>
+</div>
+<section id="menu"><div id="panel"></div></section>
 <output id="fps">– FPS</output>
 <script type="module" src="./main.js"></script>

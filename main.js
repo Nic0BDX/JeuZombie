@@ -1,5 +1,7 @@
 import { bindInput } from './input.js';
-import { resize, update, render } from './game.js';
+import { resize, update, render, background, reduceEffects } from './game.js';
+
+import { syncUi } from './ui.js';
 
 const canvas = document.querySelector('canvas');
 const fps = document.querySelector('#fps');
@@ -9,11 +11,16 @@ let last = 0, rendered = 0, time = 0, samples = 0, draws = 0, report = 0, slow =
 function fit() { resize(canvas); }
 fit();
 bindInput(canvas);
+syncUi();
 addEventListener('resize', fit);
 window.visualViewport?.addEventListener('resize', fit);
 document.addEventListener('visibilitychange', () => {
+  if(document.hidden) { background(); syncUi(); }
   last = rendered = time = samples = draws = report = 0;
 });
+
+addEventListener('pagehide', background);
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
 
 function frame(now) {
   requestAnimationFrame(frame);
@@ -26,15 +33,19 @@ function frame(now) {
     update(1 / 60);
     time -= step;
   }
-  if (!slow || now - rendered >= 32) {
+  const interval=step*(slow ? 2 : 1);
+  if(!rendered || now-rendered >= interval-1) {
     render();
-    rendered = now;
+    syncUi();
+    rendered = rendered ? Math.max(now-interval,rendered+interval) : now;
+    if(rendered>now+1) rendered=now;
     draws++;
   }
   const elapsed = now - report;
   if (elapsed < 1000) return;
   const refresh = samples * 1000 / elapsed;
   slow = refresh < (slow ? 56 : 50);
+  reduceEffects(slow);
   fps.value = Math.round(draws * 1000 / elapsed) + ' FPS';
   report = now;
   samples = draws = 0;

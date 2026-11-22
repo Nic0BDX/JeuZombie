@@ -1,5 +1,7 @@
 # Progression
-- Phase 1 déployée sur https://jeuzombie.vercel.app : Canvas 2D, déplacement, joystick, sol infini, compteur FPS et manifest.
-- Fichiers clés : index.html, main.js, game.js, input.js, sprites.js, player.js, data/characters.js.
-- Le jeu remplit le format disponible en adaptant la surface logique à un facteur entier en pixels physiques.
-- Validation tactile sur téléphone à faire. Installation hors ligne prévue en phase 8.
+- Phases 1 à 8 implémentées. Prototype mobile complet, jouable de l’accueil à la victoire ou à la défaite.
+- Combat : game.js, enemies.js, weapons.js, waves.js, pickups.js et données d’équilibrage dans data/.
+- Interface, boutique, sauvegarde et hors ligne : ui.js, save.js, audio.js et sw.js.
+- La victoire demande de vaincre le boss qui apparaît à 15:00.
+- Le dixième passif augmente l’aimant et la croissance XP.
+- Vigilance : vérifier le tactile, l’installation et les performances sur un vrai téléphone.
