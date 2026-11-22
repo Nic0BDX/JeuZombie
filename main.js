@@ -1,6 +1,7 @@
 import { bindInput } from './input.js';
 import { resize, update, render, background, reduceEffects, run } from './game.js';
 
+import { startSocial } from './social.js';
 import { startAccounts } from './online.js';
 import { syncUi } from './ui.js';
 
@@ -14,6 +15,7 @@ function fit() { resize(canvas); dirty=true; }
 fit();
 bindInput(canvas);
 syncUi();
+startSocial();
 startAccounts();
 addEventListener('resize', fit);
 window.visualViewport?.addEventListener('resize', fit);

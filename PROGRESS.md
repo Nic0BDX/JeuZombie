@@ -1,7 +1,7 @@
 # Progression
-- Améliorations P1 à P5 livrées. ONLINE P1 : accès invité, profil, récupération par e-mail et fusion du solo.
-- Fichiers clés : ONLINE.md, supabase/migration.sql, config.js, api/config.js, online.js, profile-ui.js et save.js.
-- Supabase : exécuter la migration, activer les invités et la liaison, autoriser les URL de redirection.
-- Vercel : SUPABASE_URL et SUPABASE_PUBLISHABLE_KEY pour Preview, puis redéployer.
-- Le portefeuille compétitif est séparé de la progression locale importée. Amis et coop restent à faire.
-- Aucun projet Supabase configuré sur cette préversion. Authentification et RLS réelles restent à vérifier.
+- ONLINE P2 : amis, demandes, blocages, présence privée, invitations et salons partageables.
+- Fichiers clés : social.js, social-ui.js, online.js et supabase/online-p2.sql.
+- Appliquer migration.sql puis online-p2.sql. Vercel utilise toujours SUPABASE_URL et SUPABASE_PUBLISHABLE_KEY.
+- Limites SQL : 100 amis, 20 demandes en attente, 5 secondes entre invitations par ami, 4 joueurs par salon.
+- Salon d’attente uniquement. Coop et simulation partagée en P3.
+- Realtime, RLS et scénarios à deux téléphones restent à vérifier sur Supabase configuré.

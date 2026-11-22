@@ -27,6 +27,7 @@ async function request(path,method='GET',body,token) {
     const error=new Error('Service indisponible');
     error.status=response.status;
     error.code=data?.error_code ?? data?.code;
+    if(error.code==='P0001') error.detail=data?.message;
     throw error;
   }
   return data;
@@ -98,6 +99,11 @@ async function authenticate(expected) {
   }
   setSession(await request('/auth/v1/signup','POST',{data:{}}),expected);
 }
+
+export function socialConnection() {
+  return account.status==='online' && config && session ? {url:config.url,key:config.key,id:session.id,token:session.access,until:session.until} : null;
+}
+export function socialRpc(name,body) { return rpc(name,body); }
 
 function rpc(name,body,token=session?.access) { return request('/rest/v1/rpc/'+name,'POST',body,token); }
 

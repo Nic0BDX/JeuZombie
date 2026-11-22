@@ -83,6 +83,11 @@ summary{min-height:48px;padding:12px 8px;cursor:pointer;text-align:left;backgrou
 .account-form{display:grid;gap:7px;margin-bottom:14px}
 .account-form label{display:grid;gap:5px;text-align:left}
 .account-form input{width:100%;min-height:48px;padding:8px 10px;font:inherit;color:inherit;background:#191a23;border:1px solid #706473;user-select:text;-webkit-user-select:text;touch-action:manipulation}
+.social-list{list-style:none;margin:10px 0;padding:0;text-align:left}
+.social-list li,.social-room{padding:8px;border:1px solid #696375;margin-bottom:6px}
+.social-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+#social-banner{position:absolute;z-index:5;top:calc(env(safe-area-inset-top) + 84px);left:50%;transform:translateX(-50%);display:flex;gap:4px;width:max-content;max-width:96%}
+#social-banner button:first-child{background:#3a5349}
 </style>
 <canvas aria-label="Les Cendres du Marais"></canvas>
 <div id="hud" hidden>
@@ -91,6 +96,7 @@ summary{min-height:48px;padding:12px 8px;cursor:pointer;text-align:left;backgrou
   <div id="boss" hidden><span></span><div class="track"><i></i></div></div>
   <div id="kit"></div>
 </div>
+<aside id="social-banner" aria-label="Invitations" hidden></aside>
 <section id="menu"><div id="panel"></div></section>
 <output id="fps">– FPS</output>
 <script type="module" src="./main.js"></script>

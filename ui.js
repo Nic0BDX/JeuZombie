@@ -1,4 +1,5 @@
 import { selectedCharacter, selectedWeapon, seeWeapon } from './meta.js';
+import { bindSocial, drawSocial, socialMode } from './social-ui.js';
 import { drawProfile, bindProfile, retryProfile } from './profile-ui.js';
 import { bindMetaVolumes, drawMeta, drawRunResult, handleMeta } from './meta-ui.js';
 import { run, start, background, choose, reroll, skip, banishCard, dismissChest } from './game.js';
@@ -33,12 +34,16 @@ function actions(content) { return '<div class="actions">'+content+'</div>'; }
 
 const metaUi={btn,card,screen,actions};
 bindMetaVolumes(panel);
+bindSocial(panel,()=>{ if(run.mode==='menu' && page==='friends') syncUi(true); },()=>{
+  page='friends'; if(run.mode==='menu') syncUi(true);
+});
 bindProfile(panel,()=>{ if(run.mode==='menu' && (page==='profile' || page==='home')) syncUi(true); });
 
 function drawMenu() {
   if(menu.dataset) menu.dataset.metaPage=run.mode==='menu' ? page : '';
   if(run.mode==='menu') {
     if(page==='profile') drawProfile(metaUi);
+    else if(page==='friends') drawSocial(metaUi);
     else if(!drawMeta(page,metaUi)) screen('Les Cendres du Marais',actions(btn('Touche pour jouer','home','primary')),'h1');
   } else if(run.mode==='pause') {
     if(page==='pauseOptions') drawMeta(page,metaUi);
@@ -80,6 +85,7 @@ function drawKit() {
 
 export function syncUi(force=false) {
   syncAudio(run.mode,run.elapsed,run.enemyCount,run.boss>=0);
+  if(previous!==run.mode) socialMode(run.mode);
   if(force || previous!==run.mode) {
     previous=run.mode;
     document.documentElement?.classList?.toggle('left-handed',save.options.leftHanded);

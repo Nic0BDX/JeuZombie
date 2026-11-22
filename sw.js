@@ -1,6 +1,6 @@
-const cacheName='cendres-v7';
+const cacheName='cendres-v8';
 const files=['./','./index.html','./icon.svg','./icon-192.png','./icon-512.png','./manifest.webmanifest','./main.js','./game.js','./input.js','./player.js',
- './enemies.js','./weapons.js','./passives.js','./pickups.js','./waves.js','./ui.js','./audio.js','./sprites.js','./save.js','./meta.js','./meta-ui.js','./data/shop.js','./online.js','./profile-ui.js','./config.js',
+ './enemies.js','./weapons.js','./passives.js','./pickups.js','./waves.js','./ui.js','./audio.js','./sprites.js','./save.js','./meta.js','./meta-ui.js','./data/shop.js','./online.js','./profile-ui.js','./config.js','./social.js','./social-ui.js',
  './data/audio.js','./data/characters.js','./data/enemies.js','./data/weapons.js','./data/cards.js','./data/passives.js','./data/waves.js'];
 self.addEventListener('install', event=>{
   event.waitUntil(caches.open(cacheName).then(cache=>cache.addAll(files)).then(()=>self.skipWaiting()));
