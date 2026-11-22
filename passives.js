@@ -15,21 +15,30 @@ const tiers=new Uint8Array(candidates.length);
 export function resetCards() { choices.fill(-1); banned.fill(0); }
 
 export function banish(id) {
-  if(id<0 || id>=utilityOffset || !choices.includes(id)) return false;
+  const slot=choices.indexOf(id);
+  if(id<0 || id>=utilityOffset || slot<0) return false;
   banned[id]=1;
-  offer();
+  offer(slot);
   return true;
 }
 
-export function offer() {
+export function offer(replaceSlot=-1) {
   let used=0, equipped=0, held=0;
   for(let i=0;i<levels.length;i++) if(levels[i]) equipped++;
   for(let i=0;i<passiveLevels.length;i++) if(passiveLevels[i]) held++;
   for(let i=0;i<levels.length;i++) if(!banned[i] && levels[i]<weaponMax && (levels[i] || (equipped<slots && (save.weapons & (1<<i))))) candidates[used++]=i;
   for(let i=0;i<passiveLevels.length;i++) if(!banned[offset+i] && passiveLevels[i]<passiveMax && (passiveLevels[i] || held<slots)) candidates[used++]=offset+i;
-  const count=stats.luck>=extraCardLuck ? 4 : 3;
-  if(used<count) for(let i=0;i<utilityCards.length;i++) candidates[used++]=utilityOffset+i;
-  choices.fill(-1);
+  const replacing=replaceSlot>=0;
+  const count=replacing ? 1 : stats.luck>=extraCardLuck ? 4 : 3;
+  if(replacing) {
+    let remaining=0;
+    for(let i=0;i<used;i++) if(!choices.includes(candidates[i])) candidates[remaining++]=candidates[i];
+    used=remaining;
+  } else choices.fill(-1);
+  if(used<count) for(let i=0;i<utilityCards.length;i++) {
+    const id=utilityOffset+i;
+    if(!replacing || !choices.includes(id)) candidates[used++]=id;
+  }
   let total=0;
   for(let i=0;i<used;i++) {
     const id=candidates[i], owned=id<offset ? levels[id] : id<utilityOffset ? passiveLevels[id-offset] : 0;
@@ -42,7 +51,8 @@ export function offer() {
   for(let i=0;i<count && used && total>0;i++) {
     let roll=Math.random()*total, selected=0;
     while(selected<used-1 && roll>=weights[selected]) roll-=weights[selected++];
-    choices[i]=candidates[selected]; rarities[i]=tiers[selected];
+    const slot=replacing ? replaceSlot : i;
+    choices[slot]=candidates[selected]; rarities[slot]=tiers[selected];
     total-=weights[selected];
     candidates[selected]=candidates[--used];
     weights[selected]=weights[used]; tiers[selected]=tiers[used];
@@ -72,7 +82,8 @@ function weaponBonus(weapon,rank) {
 export function cardInfo(id) {
   if(id>=utilityOffset) {
     const item=utilityCards[id-utilityOffset];
-    return {name:item[0],desc:item[1],icon:'◆',tag:item[2]?'SOIN':'OR',rank:''};
+    const desc=item[3] ? 'Rapporte '+Math.round(item[3]*stats.goldGain)+' or.' : item[1];
+    return {name:item[0],desc,icon:'◆',tag:item[2]?'SOIN':'OR',rank:''};
   }
   if(id<offset) {
     const w=weapons[id], rank=levels[id], synergy=hasSynergy(id,true);

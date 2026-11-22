@@ -16,9 +16,10 @@ const menu=document.querySelector('#menu'), panel=document.querySelector('#panel
 const bar=document.querySelector('#experience'), clock=document.querySelector('#clock'), level=document.querySelector('#level');
 const boss=document.querySelector('#boss'), bossName=boss.querySelector('span'), bossBar=boss.querySelector('i');
 const kit=document.querySelector('#kit'), pause=document.querySelector('#pause');
+const percent=Array.from({length:101},(_,i)=>i+'%');
 const digits=Array.from({length:60},(_,i)=>String(i).padStart(2,'0'));
 const times=Array.from({length:3601},(_,i)=>digits[Math.floor(i/60)%60]+':'+digits[i%60]);
-let previous='', page='welcome', lastSecond=-1, lastLevel=0, lastXp=-1, lastBoss=-2, banishMode=false;
+let previous='', page='welcome', lastSecond=-1, lastLevel=0, lastXp=-1, lastBoss=-2, lastBossHp=-1, banishMode=false;
 
 function btn(label,action,classes='',disabled=false) {
   return '<button type="button" class="'+classes+'" data-do="'+action+'"'+(disabled?' disabled':'')+'>'+label+'</button>';
@@ -57,7 +58,7 @@ function drawMenu() {
   } else if(run.mode==='chest') {
     const id=run.reward;
     const label=id<0 ? '12 or' : id>=offset ? weapons[id-offset].evolution.nomEvolue : weapons[id].nom+' · niv. '+levels[id];
-    screen('Coffre', '<div class="chest" aria-hidden="true">⬙</div><p>'+label+'</p>'+actions(btn('Continuer','chest','primary')));
+    screen('Coffre', '<div class="chest'+(id>=offset ? ' evolved' : '')+'" aria-hidden="true">'+(id>=offset ? '✦' : '⬙')+'</div><p>'+label+'</p>'+actions(btn('Continuer','chest','primary')));
   } else drawRunResult(run,times[Math.min(3600,Math.floor(run.elapsed))],levels,evolved,metaUi);
 }
 
@@ -95,12 +96,15 @@ export function syncUi(force=false) {
     lastLevel=run.level; level.textContent='NV '+run.level;
   }
   const xp=Math.min(100,Math.floor(run.xp/run.goal*100));
-  if(lastXp!==xp) { lastXp=xp; bar.style.width=xp+'%'; }
+  if(lastXp!==xp) { lastXp=xp; bar.style.width=percent[Math.max(0,Math.min(100,xp))]; }
   if(run.boss!==lastBoss) {
     lastBoss=run.boss; boss.hidden=run.boss<0;
     if(run.boss>=0) bossName.textContent=enemies[mobs[run.boss].kind].name;
   }
-  if(run.boss>=0) bossBar.style.width=Math.max(0,Math.round(mobs[run.boss].hp/mobs[run.boss].max*100))+'%';
+  if(run.boss>=0) {
+    const hp=Math.max(0,Math.min(100,Math.round(mobs[run.boss].hp/mobs[run.boss].max*100)));
+    if(lastBossHp!==hp) { lastBossHp=hp; bossBar.style.width=percent[hp]; }
+  }
 }
 
 function screenOrientationLock() {

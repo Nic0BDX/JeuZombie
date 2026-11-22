@@ -21,6 +21,7 @@ function init() {
   const Audio = window.AudioContext || window.webkitAudioContext;
   if (!Audio) return;
   context = new Audio();
+  context.addEventListener('statechange', restoreScheduler);
   master = context.createGain();
   music = context.createGain();
   sfx = context.createGain();
@@ -77,6 +78,10 @@ export async function unlock() {
     await context.resume();
     alignContext();
   } catch {}
+}
+
+function restoreScheduler() {
+  if (shouldPlay() && context.state === 'running' && timer === undefined) pump();
 }
 
 function alignContext() {

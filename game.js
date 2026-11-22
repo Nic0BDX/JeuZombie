@@ -17,7 +17,7 @@ import { sound, vibrate, soundIds } from './audio.js';
 import { save, persist } from './save.js';
 
 export const run={ mode:'menu', elapsed:0, xp:0, goal:xpGoal(1,1), level:1, kills:0, gold:0, paid:0, rerolls:cardTools.rerolls, skips:cardTools.skips, banishes:cardTools.banishes, chests:0, reward:-1, boss:-1, enemyCount:0 };
-const effects=Array.from({length:caps.effects},()=>({life:0,x:0,y:0,vx:0,vy:0,label:'',color:''}));
+const effects=Array.from({length:caps.effects},()=>({life:0,x:0,y:0,vx:0,vy:0,label:'',color:'',bold:false}));
 const numbers=Array.from({length:1000},(_,i)=>String(i));
 const chainLinks=[3,3], noDash=[];
 const gems=['#69b9ff','#97defe','#a8a4ff','#b4f4ff','#f67676','#83efd3','#f69467','#f9d676','#f2ba83'];
@@ -90,15 +90,15 @@ export function banishCard(id) {
 
 function addGold(value) { run.gold+=Math.round(value*stats.goldGain); sound(soundIds.coin); }
 
-function particle(x,y,vx,vy,life,label,color) {
+function particle(x,y,vx,vy,life,label,color,bold=false) {
   const p=effects[cursor++ % effects.length];
-  p.x=x; p.y=y; p.vx=vx; p.vy=vy; p.life=life; p.label=label; p.color=color;
+  p.x=x; p.y=y; p.vx=vx; p.vy=vy; p.life=life; p.label=label; p.color=color; p.bold=bold;
 }
 
 function hit(m,damage,critical) {
   if(stats.lifeSteal) player.hp=Math.min(stats.health,player.hp+Math.min(m.hp,damage)*stats.lifeSteal);
   m.hp-=damage; m.flash=.1;
-  if(save.options.quality) particle(m.x,m.y-8,0,-24,.5,numbers[Math.min(999,Math.round(damage))],critical ? '#ffe98e' : '#fff3d1');
+  if(save.options.quality && (critical || !reduced)) particle(m.x,m.y-8,0,-24,.5,numbers[Math.min(999,Math.round(damage))],critical ? '#ffe98e' : '#fff3d1',critical);
   if(impact<=0) { sound(1); impact=.075; }
   if(m.hp>0) return;
   m.active=false; run.kills++;
@@ -113,7 +113,7 @@ function hit(m,damage,critical) {
     else if(roll<.032) drop(3,m.x,m.y);
     else if(roll<.13) drop(4,m.x,m.y,2);
   }
-  const count=save.options.quality*(reduced ? 1 : 2);
+  const count=reduced ? 0 : save.options.quality*2;
   for(let i=0;i<count;i++) particle(m.x,m.y,(Math.random()-.5)*70,(Math.random()-.5)*70,.28,'',enemies[m.kind].color);
   if(m.kind>=5) shake=.24;
   sound(2);
@@ -278,8 +278,15 @@ function renderEntities(left,top) {
     art.drawImage(sprite,-size/2,-size/2,size,size);
     art.resetTransform();
     if(!reduced && save.options.quality) {
-      if(m.burn>0) { art.fillStyle='#ff9e55'; art.fillRect(x-5,y-9,2,3); }
-      if(m.poison>0) { art.fillStyle='#aadc73'; art.fillRect(x+4,y-7,2,2); }
+      if(m.burn>0) {
+        const flicker=(Math.floor(t*14)+i)&1;
+        art.fillStyle='#e56f4a'; art.fillRect(x-6,y-10+flicker,3,4);
+        art.fillStyle='#ffd487'; art.fillRect(x-5,y-10,1,3);
+      }
+      if(m.poison>0) {
+        const rise=(Math.floor(t*12)+i)%5;
+        art.fillStyle='#aadc73'; art.fillRect(x+5,y-8-rise,2,2); art.fillRect(x+8,y-5-rise,1,1);
+      }
       if(m.stun>0) { art.fillStyle='#c8e7ff'; art.fillRect(x-1,y-13,3,2); }
       if(m.slow>0) { art.fillStyle='#c6b2db'; art.fillRect(x-3,y+7,6,1); }
     }
@@ -334,6 +341,7 @@ function renderEntities(left,top) {
     }
     art.globalAlpha=1;
   }
+  let bold=false;
   art.font='bold 8px monospace';
   for(let i=0;i<effects.length;i++) {
     const p=effects[i];
@@ -342,8 +350,10 @@ function renderEntities(left,top) {
     if(!visible(x,y,12)) continue;
     art.globalAlpha=Math.min(1,p.life*5);
     art.fillStyle=p.color;
-    if(p.label) art.fillText(p.label,x-4,y);
-    else art.fillRect(x,y,2,2);
+    if(p.label) {
+      if(p.bold!==bold) { bold=p.bold; art.font=bold ? 'bold 11px monospace' : 'bold 8px monospace'; }
+      art.fillText(p.label,x-4,y);
+    } else art.fillRect(x,y,2,2);
   }
   art.globalAlpha=1;
 }

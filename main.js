@@ -1,14 +1,15 @@
 import { bindInput } from './input.js';
-import { resize, update, render, background, reduceEffects } from './game.js';
+import { resize, update, render, background, reduceEffects, run } from './game.js';
 
 import { syncUi } from './ui.js';
 
 const canvas = document.querySelector('canvas');
 const fps = document.querySelector('#fps');
 const step = 1000 / 60;
+let lastMode='', dirty=true;
 let last = 0, rendered = 0, time = 0, samples = 0, draws = 0, report = 0, slow = false;
 
-function fit() { resize(canvas); }
+function fit() { resize(canvas); dirty=true; }
 fit();
 bindInput(canvas);
 syncUi();
@@ -34,7 +35,9 @@ function frame(now) {
     time -= step;
   }
   const interval=step*(slow ? 2 : 1);
-  if(!rendered || now-rendered >= interval-1) {
+  if((run.mode==='playing' || run.mode!==lastMode || dirty) && (!rendered || now-rendered >= interval-1)) {
+    lastMode=run.mode;
+    dirty=false;
     render();
     syncUi();
     rendered = rendered ? Math.max(now-interval,rendered+interval) : now;
@@ -43,6 +46,7 @@ function frame(now) {
   }
   const elapsed = now - report;
   if (elapsed < 1000) return;
+  if(run.mode!=='playing') { report=now; samples=draws=0; return; }
   const refresh = samples * 1000 / elapsed;
   slow = refresh < (slow ? 56 : 50);
   reduceEffects(refresh < 45 || draws * 1000 / elapsed < 45 && !slow);

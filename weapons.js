@@ -78,6 +78,7 @@ export function enemyShot(x,y,dx,dy,damage) {
 }
 
 function nearest(width,height,range,x0=player.x,y0=player.y) {
+  if(range<=20) return closestInCellRange(x0,y0,range);
   let target=null, best=range*range;
   for(let i=0;i<mobs.length;i++) {
     const m=mobs[i];
@@ -88,6 +89,21 @@ function nearest(width,height,range,x0=player.x,y0=player.y) {
     if(d<best) { best=d; target=m; }
   }
   return target;
+}
+
+function closestInCellRange(px,py,range) {
+  let best=range*range, found=null;
+  for(let y=Math.floor((py-range)/32);y<=Math.floor((py+range)/32);y++) {
+    for(let x=Math.floor((px-range)/32);x<=Math.floor((px+range)/32);x++) {
+      for(let i=head[bucket(x,y)];i>=0;i=links[i]) {
+        const m=mobs[i];
+        if(!m.active) continue;
+        const dx=m.x-px,dy=m.y-py,d=dx*dx+dy*dy;
+        if(d<best) { best=d; found=m; }
+      }
+    }
+  }
+  return found;
 }
 
 function randomTarget(width,height,range) {
